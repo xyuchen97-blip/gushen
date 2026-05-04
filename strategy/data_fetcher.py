@@ -150,10 +150,22 @@ def _standardize_columns(df: pd.DataFrame, market: str = "") -> pd.DataFrame:
 # ═══════════════════════════════════════════════════════════════════
 
 def _load_us_symbol_map():
-    """Lazily build MSFT → 105.MSFT mapping from Eastmoney US spot data."""
+    """Lazily build MSFT → 105.MSFT mapping from Eastmoney US spot data.
+    Cached to disk to avoid 4+ minute startup on first call."""
     global _us_symbol_map
     if _us_symbol_map:
         return
+    
+    cache_file = CACHE_DIR / "us_symbol_map.json"
+    if cache_file.exists():
+        try:
+            import json
+            with open(cache_file) as f:
+                _us_symbol_map = json.load(f)
+            return
+        except Exception:
+            pass
+    
     try:
         _limiter_ak.acquire()
         spot = ak.stock_us_spot_em()
@@ -162,9 +174,17 @@ def _load_us_symbol_map():
             if "." in code:
                 _, name = code.split(".", 1)
                 _us_symbol_map[name.strip().upper()] = code
+        
+        # Persist to disk
+        try:
+            import json
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            with open(cache_file, "w") as f:
+                json.dump(_us_symbol_map, f)
+        except Exception:
+            pass
     except Exception as e:
         print(f"  [WARN] US symbol map build failed: {e}")
-        # Map will remain empty — fallback to direct pass-through
 
 
 def _get_us_symbol(ticker: str) -> str:
@@ -346,17 +366,25 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
     if vix is not None and not vix.empty:
         macro["vix"] = vix
 
-    # ── USD/CNY (akshare) ───────────────────────────────────
+    # ── USD/CNY (FRED API DEXCHUS — replaces stale currency_boc_sina) ──
     try:
-        _limiter_ak.acquire()
-        cny = ak.currency_boc_sina(symbol="美元")
-        if not cny.empty:
-            date_col = "日期" if "日期" in cny.columns else "date"
-            cny["date"] = pd.to_datetime(cny[date_col])
-            cny = cny.set_index("date").sort_index()
-            macro["usdcny"] = cny["中行折算价"].astype(float)
+        _limiter_fred.acquire()
+        resp = requests.get(FRED_BASE_URL, params={
+            "series_id": "DEXCHUS",
+            "api_key": FRED_API_KEY,
+            "file_type": "json",
+            "sort_order": "asc",
+            "observation_start": start,
+        }, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        obs = data.get("observations", [])
+        if obs:
+            vals = [float(o["value"]) if o["value"] != "." else np.nan for o in obs]
+            dates = [pd.Timestamp(o["date"]) for o in obs]
+            macro["usdcny"] = pd.Series(vals, index=pd.DatetimeIndex(dates), name="usdcny").sort_index().dropna()
     except Exception as e:
-        print(f"  [WARN] USD/CNY fetch: {e}")
+        print(f"  [WARN] USD/CNY (FRED) fetch: {e}")
 
     # ── US/CN Bond Yields (akshare bond_zh_us_rate) ──────────
     # Replaces: yf.download("^TNX"), yf.download("^FVX")
@@ -447,17 +475,16 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
     except Exception as e:
         print(f"  [WARN] China CPI fetch: {e}")
 
-    # ── China PMI (akshare) ─────────────────────────────────
+    # ── China PMI (Caixin Manufacturing — replaces stale macro_china_pmi_yearly) ──
     try:
         _limiter_ak.acquire()
-        pmi = ak.macro_china_pmi_yearly()
+        pmi = ak.index_pmi_man_cx()
         if not pmi.empty:
-            date_col = "日期" if "日期" in pmi.columns else pmi.columns[0]
-            pmi["date"] = pd.to_datetime(pmi[date_col])
+            pmi["date"] = pd.to_datetime(pmi["日期"])
             pmi = pmi.set_index("date").sort_index()
-            macro["china_pmi"] = pmi["今值"].astype(float)
+            macro["china_pmi"] = pmi["制造业PMI"].astype(float)
     except Exception as e:
-        print(f"  [WARN] China PMI fetch: {e}")
+        print(f"  [WARN] China PMI (Caixin) fetch: {e}")
 
     # ── Northbound Flow (A-share only) ───────────────────────
     try:
