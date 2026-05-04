@@ -1,0 +1,9 @@
+# User watchlist data — not tracked
+data/watchlist.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
