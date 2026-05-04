@@ -425,16 +425,25 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
     except Exception as e:
         print(f"  [WARN] US CPI fetch: {e}")
 
+    # ── US Unemployment (FRED UNRATE — replaces stale macro_usa_unemployment_rate) ──
     try:
-        _limiter_ak.acquire()
-        unemp = ak.macro_usa_unemployment_rate()
-        if not unemp.empty:
-            date_col = "日期" if "日期" in unemp.columns else unemp.columns[0]
-            unemp["date"] = pd.to_datetime(unemp[date_col])
-            unemp = unemp.set_index("date").sort_index()
-            macro["us_unemployment"] = unemp["今值"].astype(float)
+        _limiter_fred.acquire()
+        resp = requests.get(FRED_BASE_URL, params={
+            "series_id": "UNRATE",
+            "api_key": FRED_API_KEY,
+            "file_type": "json",
+            "sort_order": "asc",
+            "observation_start": start,
+        }, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        obs = data.get("observations", [])
+        if obs:
+            vals = [float(o["value"]) if o["value"] != "." else np.nan for o in obs]
+            dates = [pd.Timestamp(o["date"]) for o in obs]
+            macro["us_unemployment"] = pd.Series(vals, index=pd.DatetimeIndex(dates), name="unrate").sort_index().dropna()
     except Exception as e:
-        print(f"  [WARN] US unemployment fetch: {e}")
+        print(f"  [WARN] US Unemployment (FRED) fetch: {e}")
 
     # ── China M2 (akshare) ──────────────────────────────────
     try:
