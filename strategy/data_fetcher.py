@@ -530,3 +530,85 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
         print(f"  [WARN] Northbound flow fetch: {e}")
 
     return macro
+
+
+# ═══════════════════════════════════════════════════════════════════
+# FUNDAMENTAL DATA FETCHER (v8.3 — replaces fixed 10-point neutral)
+# ═══════════════════════════════════════════════════════════════════
+
+@with_retry(max_retries=2)
+def fetch_fundamental(ticker: str, market: str) -> dict:
+    """
+    Fetch latest earnings quality metrics from akshare.
+    
+    Returns dict with keys: roe, eps_yoy, revenue_yoy, profit_margin
+    Returns empty dict if data unavailable (scoring falls back to fixed 10).
+    """
+    result = {}
+    _limiter_ak.acquire()
+    
+    try:
+        if market == "A":
+            code = f"{ticker}.{'SH' if ticker.startswith('6') else 'SZ'}"
+            df = ak.stock_financial_analysis_indicator_em(symbol=code)
+            if df is None or df.empty:
+                return {}
+            latest = df.iloc[0]
+            result["roe"] = float(latest.get("ROEJQ", 0)) if latest.get("ROEJQ") and str(latest["ROEJQ"]).strip() and str(latest["ROEJQ"]) != "nan" else 0
+            result["eps"] = float(latest.get("EPSJB", 0)) if latest.get("EPSJB") and str(latest["EPSJB"]).strip() and str(latest["EPSJB"]) != "nan" else 0
+            # YoY growth from sequential quarters
+            if len(df) > 4:
+                prev = df.iloc[4]
+                cur_np = float(latest.get("PARENTNETPROFIT", 0)) if latest.get("PARENTNETPROFIT") and str(latest["PARENTNETPROFIT"]).strip() != "nan" else 0
+                prev_np = float(prev.get("PARENTNETPROFIT", 0)) if prev.get("PARENTNETPROFIT") and str(prev["PARENTNETPROFIT"]).strip() != "nan" else 0
+                if prev_np > 0:
+                    result["profit_growth"] = (cur_np - prev_np) / prev_np
+                cur_rev = float(latest.get("OPERATEREVE", 0)) if latest.get("OPERATEREVE") and str(latest["OPERATEREVE"]).strip() != "nan" else 0
+                prev_rev = float(prev.get("OPERATEREVE", 0)) if prev.get("OPERATEREVE") and str(prev["OPERATEREVE"]).strip() != "nan" else 0
+                if prev_rev > 0:
+                    result["revenue_growth"] = (cur_rev - prev_rev) / prev_rev
+            # Profit margin
+            cur_np2 = float(latest.get("PARENTNETPROFIT", 0)) if latest.get("PARENTNETPROFIT") and str(latest["PARENTNETPROFIT"]).strip() != "nan" else 0
+            cur_rev2 = float(latest.get("OPERATEREVE", 0)) if latest.get("OPERATEREVE") and str(latest["OPERATEREVE"]).strip() != "nan" else 0
+            if cur_rev2 > 0:
+                result["profit_margin"] = cur_np2 / cur_rev2
+                
+        elif market == "HK":
+            code = ticker.replace(".HK", "").zfill(5)
+            df = ak.stock_financial_hk_analysis_indicator_em(symbol=code)
+            if df is None or df.empty:
+                return {}
+            latest = df.iloc[0]
+            result["roe"] = float(latest.get("ROE_AVG", 0)) if latest.get("ROE_AVG") and str(latest["ROE_AVG"]).strip() != "nan" else 0
+            result["revenue_growth"] = float(latest.get("OPERATE_INCOME_YOY", 0))/100 if latest.get("OPERATE_INCOME_YOY") and str(latest["OPERATE_INCOME_YOY"]).strip() != "nan" else 0
+            result["profit_margin"] = float(latest.get("NET_PROFIT_RATIO", 0))/100 if latest.get("NET_PROFIT_RATIO") and str(latest["NET_PROFIT_RATIO"]).strip() != "nan" else 0
+            result["eps"] = float(latest.get("BASIC_EPS", 0)) if latest.get("BASIC_EPS") and str(latest["BASIC_EPS"]).strip() != "nan" else 0
+            
+        elif market == "US":
+            df = ak.stock_financial_us_analysis_indicator_em(symbol=ticker)
+            if df is None or df.empty:
+                return {}
+            # Filter to latest with actual data
+            for i in range(len(df)):
+                row = df.iloc[i]
+                roe = row.get("ROE_AVG", 0)
+                if roe and str(roe).strip() and str(roe) != "nan":
+                    result["roe"] = float(roe)
+                    break
+            for i in range(len(df)):
+                row = df.iloc[i]
+                marg = row.get("NET_PROFIT_RATIO", 0)
+                if marg and str(marg).strip() and str(marg) != "nan":
+                    result["profit_margin"] = float(marg)/100
+                    break
+            for i in range(len(df)):
+                row = df.iloc[i]
+                rev_g = row.get("OPERATE_INCOME_YOY", 0)
+                if rev_g and str(rev_g).strip() and str(rev_g) != "nan":
+                    result["revenue_growth"] = float(rev_g)/100
+                    break
+    except Exception as e:
+        print(f"  [WARN] Fundamental fetch for {ticker}: {e}")
+        return {}
+    
+    return result

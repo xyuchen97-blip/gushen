@@ -431,13 +431,24 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
                 elif qv_val > QVIX_THRESHOLDS["high"]:
                     macro_score += MACRO_SCORES["china_qvix_high"]; active.append("qvix_fear")
 
-    # ── Fundamental (fixed neutral) ──────────────────────────
-    fund_score = 10
+    # ── Fundamental (v8.3: dynamic earnings quality) ────────
+    fund_score = 10  # base neutral
+    if macro_data and "fundamentals" in macro_data:
+        f = macro_data["fundamentals"]
+        if f:
+            if f.get("roe", 0) > 15: fund_score += 5
+            elif f.get("roe", 0) > 10: fund_score += 3
+            if f.get("profit_growth", -999) > 0.2: fund_score += 4
+            elif f.get("profit_growth", -999) > 0: fund_score += 2
+            if f.get("revenue_growth", -999) > 0.15: fund_score += 4
+            elif f.get("revenue_growth", -999) > 0: fund_score += 2
+            if f.get("profit_margin", 0) > 0.15: fund_score += 3
+            elif f.get("profit_margin", 0) > 0.05: fund_score += 1
 
     # ── Normalize & Weight ──────────────────────────────────
     tech_n  = min(tech / 45.0, 1.0) * w["technical"]
     cap_n   = min(cap / 14.0, 1.0) * w["capital"]
-    fund_n  = min(fund_score / 10.0, 1.0) * w["fundamental"]
+    fund_n  = min(min(fund_score, 15) / 15.0, 1.0) * w["fundamental"]  # v8.3: base 10=neutral, max 15
     macro_n = min(macro_score / 35.0, 1.0) * w["macro"]
     composite = tech_n + cap_n + fund_n + macro_n + fib_bonus
 

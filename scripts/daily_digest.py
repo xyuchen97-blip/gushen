@@ -24,7 +24,7 @@ PACKAGE_ROOT = str(Path(__file__).parent.parent)
 sys.path.insert(0, PACKAGE_ROOT)
 
 from strategy.scoring import score
-from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, clear_cache
+from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, fetch_fundamental, clear_cache
 
 WL_FILE = Path(__file__).parent.parent / "data" / "watchlist.json"
 MARKET_NAMES = {"A": "A股", "HK": "港股", "US": "美股", "CN_IDX": "指数"}
@@ -139,7 +139,11 @@ def _watchlist_section(start: str, end: str, macro: dict,
                 json_data["stocks"].append(stock_entry)
                 continue
 
-            r = score(df_d, df_w, ticker=ticker, market=market, macro_data=macro)
+            # v8.3: inject fundamentals per stock
+            f = fetch_fundamental(ticker, market)
+            macro_clone = dict(macro)
+            if f: macro_clone["fundamentals"] = f
+            r = score(df_d, df_w, ticker=ticker, market=market, macro_data=macro_clone)
             comp = r["composite"]
             action = r["action"]
             sig_str = ", ".join(r["active"][:3]) if r["active"] else "—"

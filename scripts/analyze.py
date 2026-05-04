@@ -11,7 +11,7 @@ PACKAGE_ROOT = str(Path(__file__).parent.parent)
 sys.path.insert(0, PACKAGE_ROOT)
 
 from strategy.scoring import score
-from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, clear_cache
+from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, fetch_fundamental, clear_cache
 
 MARKET_NAMES = {"A": "A股", "HK": "港股", "US": "美股", "CN_IDX": "指数"}
 
@@ -34,6 +34,10 @@ def analyze(ticker, market, start="2021-01-01"):
         clear_cache()
 
     # Score
+    # v8.3: inject fundamentals into macro_data
+    fundamentals = fetch_fundamental(ticker, market)
+    if fundamentals:
+        macro["fundamentals"] = fundamentals
     result = score(df_daily, df_weekly, ticker=ticker, market=market, macro_data=macro)
     current_price = float(df_daily["close"].iloc[-1])
     result["current_price"] = current_price
