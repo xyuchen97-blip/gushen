@@ -59,8 +59,9 @@ python3 scripts/cleanup.py
 ## Requirements
 
 - Python 3.10+
-- `pip install akshare yfinance pandas numpy`
+- `pip install akshare pandas numpy requests`
 - **Self-contained** — strategy engine bundled in package, no external workspace needed
+- yfinance fully removed (May 2026) — all data from akshare + FRED API
 
 ## Files
 

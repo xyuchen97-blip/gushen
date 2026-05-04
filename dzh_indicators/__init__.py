@@ -9,7 +9,7 @@ Three classic DZH indicators, fully ported to Python:
 - **Band King** (`band_king`)         — Multi-period ZIG resonance indicator
 
 All indicators accept pandas DataFrames (OHLCV format).
-Compatible with akshare / tushare / yfinance data sources.
+Compatible with akshare / tushare data sources.
 
 Usage:
     import akshare as ak

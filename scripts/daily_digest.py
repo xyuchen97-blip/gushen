@@ -178,6 +178,7 @@ def run(format_json: bool = False) -> str:
     start = (today - timedelta(days=365 * 2)).strftime("%Y-%m-%d")
     end = today.strftime("%Y-%m-%d")
 
+    json_data = {}  # Initialize before use
     json_data["date"] = today.strftime("%Y-%m-%d")
     json_data["weekday"] = today.strftime("%A")
 
