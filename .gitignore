@@ -7,3 +7,7 @@ __pycache__/
 
 # OS files
 .DS_Store
+
+# Strategy data cache (runtime)
+strategy/_cache/
+*.pkl

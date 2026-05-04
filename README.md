@@ -12,6 +12,7 @@ https://github.com/xyuchen97-blip/gushen
 
 ## What It Does
 
+- 🔤 **Stock name normalization** — "超微电子" → AMD:US, "茅台" → 600519:A, "英伟达" → NVDA:US
 - 📊 **Single-stock analysis** — BUY/WATCH/HOLD/EXIT with detailed reasoning
 - 📋 **Watchlist management** — maintain a curated list across A/HK/US markets
 - 🌅 **Daily 8:30 AM digest** — market overview (CSI 300, S&P 500, Nasdaq, VIX, USDCNY) + watchlist scoring
@@ -59,7 +60,7 @@ python3 scripts/cleanup.py
 
 - Python 3.10+
 - `pip install akshare yfinance pandas numpy`
-- A workspace with `strategy/scoring.py` (auto-discovered from `~/WorkBuddy/*/strategy/scoring.py`)
+- **Self-contained** — strategy engine bundled in package, no external workspace needed
 
 ## Files
 
@@ -69,10 +70,21 @@ gushen/
 ├── README.md             # This file
 ├── .gitignore
 ├── scripts/
+│   ├── normalize.py      # Stock name → ticker:market normalization (80+ mapping)
 │   ├── watchlist.py      # JSON watchlist CRUD
 │   ├── analyze.py        # Single-stock scoring
 │   ├── daily_digest.py   # Daily market report + watchlist analysis
 │   └── cleanup.py        # Remove files older than 7 days
+├── strategy/             # Bundled scoring engine (self-contained)
+│   ├── scoring.py        # Core scoring engine (14 technical + 10 macro/capital signals)
+│   ├── config.py         # All locked parameters
+│   ├── data_fetcher.py   # OHLCV + macro data fetching (16 APIs)
+│   ├── bollinger.py      # Bollinger Bands computation
+│   └── fibonacci.py      # Fibonacci retracement/extension
+├── dzh_indicators/       # Classic DZH indicators
+│   ├── golden_pit.py     # Golden Pit 2.0
+│   ├── jiu_zhuan.py      # Nine Turns (TD Sequential)
+│   └── band_king.py      # Band King (ZIG resonance)
 └── data/
     └── .gitkeep          # Watchlist directory (user data not tracked)
 ```

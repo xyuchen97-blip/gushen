@@ -17,37 +17,11 @@ import pandas as pd
 
 
 # ═══════════════════════════════════════════════════════════════════
-# STRATEGY DISCOVERY — finds strategy/scoring.py across workspaces
+# STRATEGY — bundled in package, no external workspace needed
 # ═══════════════════════════════════════════════════════════════════
 
-def _find_strategy_root() -> str | None:
-    """Scan ~/WorkBuddy/ for the latest workspace containing strategy/scoring.py"""
-    explicit = os.environ.get("STRATEGY_PATH", "")
-    if explicit and Path(explicit, "strategy", "scoring.py").exists():
-        return explicit
-
-    wb_dir = Path.home() / "WorkBuddy"
-    if not wb_dir.exists():
-        return None
-
-    # Find all workspace dirs with strategy/scoring.py, pick newest
-    candidates = []
-    for ws in wb_dir.iterdir():
-        if ws.is_dir() and (ws / "strategy" / "scoring.py").exists():
-            candidates.append((ws.stat().st_mtime, str(ws)))
-    if candidates:
-        candidates.sort(reverse=True)
-        return candidates[0][1]
-
-    return None
-
-
-strategy_root = _find_strategy_root()
-if not strategy_root:
-    print("❌ 找不到策略模块。请设置 STRATEGY_PATH 环境变量或确保 strategy/scoring.py 存在。",
-          file=sys.stderr)
-    sys.exit(1)
-sys.path.insert(0, strategy_root)
+PACKAGE_ROOT = str(Path(__file__).parent.parent)
+sys.path.insert(0, PACKAGE_ROOT)
 
 from strategy.scoring import score
 from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, clear_cache
@@ -204,11 +178,8 @@ def run(format_json: bool = False) -> str:
     start = (today - timedelta(days=365 * 2)).strftime("%Y-%m-%d")
     end = today.strftime("%Y-%m-%d")
 
-    json_data = {
-        "date": today.strftime("%Y-%m-%d"),
-        "weekday": today.strftime("%A"),
-        "strategy_workspace": strategy_root,
-    }
+    json_data["date"] = today.strftime("%Y-%m-%d")
+    json_data["weekday"] = today.strftime("%A")
 
     lines = []
     lines.append(f"股神每日报告 — {today.strftime('%Y年%m月%d日')} {today.strftime('%A')}")
@@ -236,7 +207,7 @@ def run(format_json: bool = False) -> str:
     # ── Footer ────────────────────────────────────────────────
     elapsed = time_mod.time() - t0
     lines.append(f"\n{'─' * 55}")
-    lines.append(f"策略: {strategy_root} | 耗时: {elapsed:.1f}s")
+    lines.append(f"耗时: {elapsed:.1f}s")
     lines.append("以上为AI量化策略分析，不构成投资建议。")
 
     json_data["total_sec"] = round(elapsed, 1)
@@ -263,12 +234,6 @@ def _sanitize(obj):
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    json_mode = "--json" in args
-
-    if "--strategy-path" in args:
-        idx = args.index("--strategy-path")
-        os.environ["STRATEGY_PATH"] = args[idx + 1]
-
+    json_mode = "--json" in sys.argv
     output = run(format_json=json_mode)
     print(output)

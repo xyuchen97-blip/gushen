@@ -6,17 +6,9 @@ import sys, os, json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Find strategy module — check multiple locations
-STRATEGY_PATHS = [
-    os.environ.get("STRATEGY_PATH", ""),
-    str(Path.home() / "WorkBuddy" / "20260410124849"),
-]
-strategy_root = next((p for p in STRATEGY_PATHS if p and Path(p).exists()), None)
-if not strategy_root:
-    print("❌ 找不到策略模块路径。请设置 STRATEGY_PATH 环境变量。", file=sys.stderr)
-    sys.exit(1)
-
-sys.path.insert(0, strategy_root)
+# Strategy is bundled in package — self-contained
+PACKAGE_ROOT = str(Path(__file__).parent.parent)
+sys.path.insert(0, PACKAGE_ROOT)
 
 from strategy.scoring import score
 from strategy.data_fetcher import fetch_ohlcv, fetch_macro_data, clear_cache
