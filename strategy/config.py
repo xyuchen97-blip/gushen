@@ -51,3 +51,8 @@ ENTRY_THRESHOLD     = 45
 WATCHLIST_THRESHOLD = 38
 EXIT_THRESHOLD      = 20
 QVIX_THRESHOLDS     = {"very_low": 14.2, "low": 16.2, "high": 30.9}
+
+# Bollinger Band params (used by bollinger.py)
+BB_WEEKLY_PERIOD    = 20
+BB_WEEKLY_STD       = 2.0
+BB_BUY_VOL_MULTIPLE = 2.0
