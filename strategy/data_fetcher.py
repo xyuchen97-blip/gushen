@@ -148,49 +148,67 @@ def _standardize_columns(df: pd.DataFrame, market: str = "") -> pd.DataFrame:
 # ═══════════════════════════════════════════════════════════════════
 # US STOCK SYMBOL MAPPING
 # ═══════════════════════════════════════════════════════════════════
+# US STOCK SYMBOL MAPPING (on-demand via Eastmoney search API)
+# ═══════════════════════════════════════════════════════════════════
 
-def _load_us_symbol_map():
-    """Lazily build MSFT → 105.MSFT mapping from Eastmoney US spot data.
-    Cached to disk to avoid 4+ minute startup on first call."""
+def _get_us_symbol(ticker: str) -> str:
+    """Convert plain ticker (MSFT) to Eastmoney symbol (105.MSFT).
+    Uses disk cache → search API → spot_em fallback, in that order."""
     global _us_symbol_map
-    if _us_symbol_map:
-        return
     
+    # Check in-memory cache
+    key = ticker.upper().strip()
+    if key in _us_symbol_map:
+        return _us_symbol_map[key]
+    
+    # Check disk cache
     cache_file = CACHE_DIR / "us_symbol_map.json"
     if cache_file.exists():
         try:
             import json
             with open(cache_file) as f:
-                _us_symbol_map = json.load(f)
-            return
+                disk_map = json.load(f)
+            if key in disk_map:
+                _us_symbol_map[key] = disk_map[key]
+                return disk_map[key]
         except Exception:
             pass
     
+    # Eastmoney search API (~300ms, on-demand)
     try:
-        _limiter_ak.acquire()
-        spot = ak.stock_us_spot_em()
-        for _, row in spot.iterrows():
-            code = str(row.get("代码", ""))
-            if "." in code:
-                _, name = code.split(".", 1)
-                _us_symbol_map[name.strip().upper()] = code
-        
-        # Persist to disk
-        try:
-            import json
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            with open(cache_file, "w") as f:
-                json.dump(_us_symbol_map, f)
-        except Exception:
-            pass
+        import requests
+        url = "https://searchadapter.eastmoney.com/api/suggest/get"
+        params = {"input": key, "type": "14", "token": "D43BF722C8E33BDC906FB84D85E326E8", "count": "5"}
+        r = requests.get(url, params=params, timeout=5)
+        data = r.json()
+        items = data.get("QuotationCodeTable", {}).get("Data", [])
+        for item in items:
+            if item.get("Code") and item.get("MktNum"):
+                symbol = f'{item["MktNum"]}.{item["Code"]}'
+                name = item.get("Name", "").upper()
+                code = item["Code"].upper()
+                if code == key or name == key:
+                    _us_symbol_map[key] = symbol
+                    # Persist to disk
+                    try:
+                        import json
+                        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                        existing = {}
+                        if cache_file.exists():
+                            with open(cache_file) as f:
+                                existing = json.load(f)
+                        existing[key] = symbol
+                        with open(cache_file, "w") as f:
+                            json.dump(existing, f)
+                    except Exception:
+                        pass
+                    return symbol
     except Exception as e:
-        print(f"  [WARN] US symbol map build failed: {e}")
-
-
-def _get_us_symbol(ticker: str) -> str:
-    """Convert plain ticker (MSFT) to Eastmoney symbol (105.MSFT)."""
-    _load_us_symbol_map()
-    return _us_symbol_map.get(ticker.upper().strip(), ticker)
+        pass  # Fall through to pass-through
+    
+    # Fallback: pass plain ticker (may work on some akshare versions)
+    _us_symbol_map[key] = ticker
+    return ticker
 
 
 # ═══════════════════════════════════════════════════════════════════
