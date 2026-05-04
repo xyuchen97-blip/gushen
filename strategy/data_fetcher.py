@@ -472,15 +472,17 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
     except Exception as e:
         print(f"  [WARN] China LPR fetch: {e}")
 
-    # ── China CPI (akshare) ─────────────────────────────────
+    # ── China CPI (akshare macro_china_cpi — live to 2026-03) ──
     try:
         _limiter_ak.acquire()
-        cpi = ak.macro_china_cpi_yearly()
+        cpi = ak.macro_china_cpi()
         if not cpi.empty:
-            date_col = "日期" if "日期" in cpi.columns else cpi.columns[0]
-            cpi["date"] = pd.to_datetime(cpi[date_col])
-            cpi = cpi.set_index("date").sort_index()
-            macro["china_cpi"] = cpi["今值"].astype(float)
+            cpi["date"] = pd.to_datetime(
+                cpi["月份"].str.replace("年", "-").str.replace("月份", ""),
+                format="%Y-%m", errors="coerce"
+            )
+            cpi = cpi.dropna(subset=["date"]).set_index("date").sort_index()
+            macro["china_cpi"] = cpi["全国-同比增长"].astype(float)
     except Exception as e:
         print(f"  [WARN] China CPI fetch: {e}")
 
@@ -495,16 +497,17 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
     except Exception as e:
         print(f"  [WARN] China PMI (Caixin) fetch: {e}")
 
-    # ── Northbound Flow (A-share only) ───────────────────────
+    # ── Northbound Flow (stock_hsgt_fund_flow_summary_em — live daily snapshot) ──
     try:
         _limiter_ak.acquire()
-        nb = ak.stock_hsgt_hist_em(symbol="沪股通")
+        nb = ak.stock_hsgt_fund_flow_summary_em()
         if not nb.empty:
-            date_col = "日期" if "日期" in nb.columns else nb.columns[0]
-            nb["date"] = pd.to_datetime(nb[date_col])
-            nb = nb.set_index("date").sort_index()
-            nb["net_buy"] = pd.to_numeric(nb["当日成交净买额"], errors="coerce")
-            macro["northbound_flow"] = nb["net_buy"]
+            # Filter: 沪股通+深股通, 北向 only, sum net buy
+            nb_flow = nb[(nb["板块"].isin(["沪股通", "深股通"])) & (nb["资金方向"] == "北向")]
+            if not nb_flow.empty:
+                date = pd.Timestamp(nb_flow.iloc[0]["交易日"])
+                net = nb_flow["成交净买额"].sum()
+                macro["northbound_flow"] = pd.Series([net], index=[date], name="northbound")
     except Exception as e:
         print(f"  [WARN] Northbound flow fetch: {e}")
 
