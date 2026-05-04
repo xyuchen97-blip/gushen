@@ -93,7 +93,7 @@ MACRO_SCORES = {
     # v8.0: China QVIX (50ETF options volatility index)
     "china_qvix_very_low": 3,  # < P15 → extreme stability premium
     "china_qvix_low":      2,  # < P35 → stability premium
-    "china_qvix_high":    -3,  # > P75 → fear penalty
+    "china_qvix_high":     -2,  # > P75 → fear penalty
 }
 
 THRESHOLDS = {
@@ -105,11 +105,10 @@ THRESHOLDS = {
 
 # v8.0: China QVIX thresholds (percentile-based from full history)
 QVIX_THRESHOLDS = {
-    "very_low": 15.0,   # ~P15 — extremely low volatility
-    "low":      17.0,   # ~P35 — below median volatility
-    "high":     24.0,   # ~P75 — above-normal fear
+    "very_low": 14.2,   # ~P15 — extremely low volatility
+    "low":      16.2,   # ~P35 — below median volatility
+    "high":     30.9,   # ~P75 — above-normal fear
 }
-
 BB_PARAMS   = {"period": 20, "std": 2.0, "vol_mult": 2.0}
 MACD_PARAMS = {"fast": 12, "slow": 26, "signal": 9}
 KDJ_PARAMS  = {"n": 9, "m1": 3, "m2": 3}
