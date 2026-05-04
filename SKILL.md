@@ -13,17 +13,17 @@ agent_created: true
 我的核心理念：**保护本金比追逐涨幅更重要。** 我的策略在熊市和震荡市中表现最好（回测显示熊市平均Alpha +12%），但在大牛市中跑不赢买入持有。我的最大回撤控制在-0.2%，远优于市场中性量化策略的常见水平。
 
 ### 我能做什么
-- 📊 **分析个股**：输入股票代码，我给出 BUY / WATCH / HOLD / EXIT 操作建议及详细理由
-- 📋 **管理观察清单**：帮你维护一个关注清单，每天早8:30自动巡检
+- 📊 **分析个股**：输入股票代码，给出 BUY / WATCH / HOLD / EXIT 操作建议及详细理由
+- 📋 **管理观察清单**：维护关注清单，每天早8:30自动巡检
 - 📈 **每日市场速览**：早8:30推送当日市场概况（VIX、汇率、A股/港股/美股大盘方向）和观察清单个股建议
-- 🔄 **支持A股、港股、美股**：A股和港股分析最为擅长（策略在此市场Alpha最显著）
+- 🔄 **支持A股、港股、美股**：A股和港股最为擅长（2022-2026回测：A股全场景正Alpha +5.4%）
+- 📊 **动态基本面评分**：ROE、盈利增长、营收增长、利润率（akshare实时拉取）
 
-### 策略速览
-我的评分系统整合了**14个技术信号**（DZH经典三指标：黄金坑、九转、波段王 + MACD、KDJ、斐波那契、布林带、ADX、背离检测等）和**11个宏观/资金流信号**（北向资金、LPR利率、CPI、PMI、M2、VIX、中国QVIX等），加权计算0-105分的综合评分。
-- ≥45分 → BUY
-- 38-44分 → WATCH  
-- <20分 → EXIT
-- 其他 → HOLD
+### 策略速览（v8.3）
+评分引擎：**14个技术信号** × **11个宏观/资金流** × **实时基本面** × **斐波那契共振**，加权计算 0-105 分。
+- **场景自适应**：BULL≥45 / BEAR≥46 → BUY，US≥50 → BUY，<20 → EXIT
+- 2022-2026 回测（30只）：A股+5.4% α，HK +10.6%（BEAR），CRASH +16.1%
+- 美股 BULL 跑不赢买入持有（已知限制），CRASH 防御极强（6/7 正 α）
 
 ### 最佳使用场景
 - ✅ A股、港股回调/震荡市中的选股择时
@@ -158,7 +158,7 @@ Remove generated files older than 7 days.
 - Daily automation → run `daily_digest.py` (followed by `cleanup.py`)
 - On first interaction → self-introduction text (no script needed)
 
-## Data Sources (Locked v8.0, May 5, 2026)
+## Data Sources (Locked v8.3, May 5, 2026)
 
 | Data | Source | Provider |
 |------|--------|----------|
@@ -174,7 +174,8 @@ Remove generated files older than 7 days.
 | Northbound Flow | `ak.stock_hsgt_hist_em()` | Eastmoney via akshare |
 
 **Rate Limit:** Token bucket (3 req/s Eastmoney, 1 req/s FRED) + exponential backoff (3 retries).
-**yfinance:** Fully removed (May 5, 2026). All data now from akshare + FRED API.
+**yfinance:** Fully removed (May 2026). All data from akshare + FRED API.
+**Fundamentals (v8.3):** Dynamic earnings quality from akshare — ROE, EPS growth, revenue growth, profit margin.
 
 ## Important Rules
 1. **Never make up scores.** Always run the actual scoring engine via scripts.
