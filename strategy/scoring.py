@@ -97,11 +97,16 @@ MACRO_SCORES = {
 }
 
 THRESHOLDS = {
-    "entry":    45,
-    "watchlist": 38,
-    "exit":     20,
-    "min_hold":  5,
+    "entry":      45,   # bull market BUY
+    "entry_bear": 46,   # v8.2: bear market BUY — slightly higher bar
+    "watchlist":  38,   # bull market WATCH
+    "watch_bear": 39,   # v8.2: bear market WATCH — slightly tighter
+    "exit":       20,   # exit threshold (all markets)
+    "min_hold":    5,
 }
+
+# v8.2: Market-specific thresholds for US (higher vol regime)
+US_THRESHOLDS = {"entry": 50, "watchlist": 42, "exit": 22}
 
 # v8.0: China QVIX thresholds (percentile-based from full history)
 QVIX_THRESHOLDS = {
@@ -296,7 +301,7 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         trend += SIGNAL_SCORES["ma_golden_cross"]; active.append("ma_golden_cross")
     if precomputed["macd_golden"].iloc[i]:
         trend += SIGNAL_SCORES["macd_golden"]; active.append("macd_golden")
-    tech += trend if bull else int(trend * 0.5)
+    tech += trend if bull else int(trend * 0.40)  # v8.2: 0.50→0.40 — moderate bear penalty
 
     # ── Momentum ─────────────────────────────────────────────
     if precomputed["kdj_golden"].iloc[i]:
@@ -323,9 +328,12 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         tech += SELL_PENALTIES["macd_death_cross"]
     tech = max(0, tech)
 
-    # Weekly MA20 filter: 30% penalty for counter-trend in bear
+    # Weekly MA20 filter: penalty for counter-trend in bear (v8.2: market-specific)
     if not precomputed["weekly_ma20_up"].iloc[i] and not bull:
-        tech = int(tech * 0.7)
+        if market in ("A", "HK", "CN_IDX"):
+            tech = int(tech * 0.65)  # v8.2: 0.70→0.65 — stronger for A/HK
+        else:
+            tech = int(tech * 0.75)  # v8.2: US — lighter (US trends differently)
 
     # BB Weekly sell override
     bb_sell_now = precomputed["bb_sell"].iloc[i]
@@ -433,17 +441,30 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     macro_n = min(macro_score / 35.0, 1.0) * w["macro"]
     composite = tech_n + cap_n + fund_n + macro_n + fib_bonus
 
-    # ── Action ──────────────────────────────────────────────
+    # ── Action (v8.2: regime-aware + market-specific) ──────
+    # Pick thresholds based on market and regime
+    t = US_THRESHOLDS if market == "US" else THRESHOLDS
+    entry_thresh = t["entry"] if bull else t.get("entry_bear", t["entry"])
+    watch_thresh = t["watchlist"] if bull else t.get("watch_bear", t["watchlist"])
+    exit_thresh  = t["exit"]
+    
+    # BB Sell: US stocks need MA50 confirmation (higher vol → more false BB touches)
     if bb_sell_now:
-        action = "EXIT"
-    elif composite >= THRESHOLDS["entry"]:
+        if market == "US" and precomputed["price_above_ma50"].iloc[i]:
+            action = "HOLD"  # v8.2: US BB override only if also below MA50
+        else:
+            action = "EXIT"
+    elif composite >= entry_thresh:
         action = "BUY"
-    elif composite < THRESHOLDS["exit"]:
-        action = "EXIT"
-    elif composite >= THRESHOLDS["watchlist"]:
+    elif composite < exit_thresh:
+        action = "EXIT"  # v8.2: unified EXIT — removed bear exception (too lenient)
+    elif composite >= watch_thresh:
         action = "WATCH"
     else:
         action = "HOLD"
+    
+    # v8.2: contrarian confirmation removed — kept trend discount + bear thresholds as primary levers
+    # (contrarian check was too restrictive, dropping BEAR exposure from 71% to 15%)
 
     return {
         "composite":  composite,
