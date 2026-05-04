@@ -1,9 +1,12 @@
 """
-STRATEGY SCORING ENGINE — Single Source of Truth (LOCKED v7.2, May 4, 2026)
+STRATEGY SCORING ENGINE — Single Source of Truth (LOCKED v8.0, May 5, 2026)
 ===========================================================================
 
 THIS IS THE DEFINITIVE SCORING MODULE. Any LLM or agent reading this file
 should produce IDENTICAL composite scores for any given input.
+
+v8.0: China QVIX factor added (50ETF options VIX), yield spread from
+      bond_zh_us_rate, locked data sources documented.
 
 Usage:
     from strategy.scoring import score
@@ -87,6 +90,10 @@ MACRO_SCORES = {
     "china_m2_above_9": 3,
     "china_m2_above_7": 2,
     "national_team":    3,
+    # v8.0: China QVIX (50ETF options volatility index)
+    "china_qvix_very_low": 3,  # < P15 → extreme stability premium
+    "china_qvix_low":      2,  # < P35 → stability premium
+    "china_qvix_high":    -3,  # > P75 → fear penalty
 }
 
 THRESHOLDS = {
@@ -94,6 +101,13 @@ THRESHOLDS = {
     "watchlist": 38,
     "exit":     20,
     "min_hold":  5,
+}
+
+# v8.0: China QVIX thresholds (percentile-based from full history)
+QVIX_THRESHOLDS = {
+    "very_low": 15.0,   # ~P15 — extremely low volatility
+    "low":      17.0,   # ~P35 — below median volatility
+    "high":     24.0,   # ~P75 — above-normal fear
 }
 
 BB_PARAMS   = {"period": 20, "std": 2.0, "vol_mult": 2.0}
@@ -355,12 +369,11 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
             cv = macro_data["usdcny"][macro_data["usdcny"].index <= bar_date]
             if len(cv) > 20 and float(cv.iloc[-1]) <= float(cv.iloc[-20:].mean()):
                 macro_score += MACRO_SCORES["usdcny_cnhk" if market in ("A","CN_IDX","HK") else "usdcny_us"]
-        # Yield curve
-        if all(k in macro_data for k in ["yield10y", "yield5y"]):
-            t10 = macro_data["yield10y"][macro_data["yield10y"].index <= bar_date]
-            t5  = macro_data["yield5y"][macro_data["yield5y"].index <= bar_date]
-            if len(t10) > 0 and len(t5) > 0:
-                sp = float(t10.iloc[-1]) - float(t5.iloc[-1])
+        # Yield curve spread (10Y-2Y from bond_zh_us_rate)
+        if "us_spread_10y2y" in macro_data:
+            sv = macro_data["us_spread_10y2y"][macro_data["us_spread_10y2y"].index <= bar_date]
+            if len(sv) > 0:
+                sp = float(sv.iloc[-1])
                 if sp > 0.5: macro_score += MACRO_SCORES["spread_above_05"]
                 elif sp > 0: macro_score += MACRO_SCORES["spread_positive"]
     # US Macro
@@ -399,6 +412,17 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
                 elif m > 7.0: macro_score += MACRO_SCORES["china_m2_above_7"]
         if precomputed.get("vol_anomaly") is not None and precomputed["vol_anomaly"].iloc[i]:
             macro_score += MACRO_SCORES["national_team"]; active.append("national_team")
+        # v8.0: China QVIX (50ETF options volatility index)
+        if "china_qvix" in macro_data:
+            qv = macro_data["china_qvix"][macro_data["china_qvix"].index <= bar_date]
+            if len(qv) > 0:
+                qv_val = float(qv.iloc[-1])
+                if qv_val < QVIX_THRESHOLDS["very_low"]:
+                    macro_score += MACRO_SCORES["china_qvix_very_low"]; active.append("qvix_very_low")
+                elif qv_val < QVIX_THRESHOLDS["low"]:
+                    macro_score += MACRO_SCORES["china_qvix_low"]; active.append("qvix_low")
+                elif qv_val > QVIX_THRESHOLDS["high"]:
+                    macro_score += MACRO_SCORES["china_qvix_high"]; active.append("qvix_fear")
 
     # ── Fundamental (fixed neutral) ──────────────────────────
     fund_score = 10
@@ -407,7 +431,7 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     tech_n  = min(tech / 45.0, 1.0) * w["technical"]
     cap_n   = min(cap / 14.0, 1.0) * w["capital"]
     fund_n  = min(fund_score / 10.0, 1.0) * w["fundamental"]
-    macro_n = min(macro_score / 31.0, 1.0) * w["macro"]
+    macro_n = min(macro_score / 35.0, 1.0) * w["macro"]
     composite = tech_n + cap_n + fund_n + macro_n + fib_bonus
 
     # ── Action ──────────────────────────────────────────────

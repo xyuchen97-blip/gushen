@@ -19,7 +19,7 @@ agent_created: true
 - 🔄 **支持A股、港股、美股**：A股和港股分析最为擅长（策略在此市场Alpha最显著）
 
 ### 策略速览
-我的评分系统整合了**14个技术信号**（DZH经典三指标：黄金坑、九转、波段王 + MACD、KDJ、斐波那契、布林带、ADX、背离检测等）和**10个宏观/资金流信号**（北向资金、LPR利率、CPI、PMI、M2、VIX等），加权计算0-105分的综合评分。
+我的评分系统整合了**14个技术信号**（DZH经典三指标：黄金坑、九转、波段王 + MACD、KDJ、斐波那契、布林带、ADX、背离检测等）和**11个宏观/资金流信号**（北向资金、LPR利率、CPI、PMI、M2、VIX、中国QVIX等），加权计算0-105分的综合评分。
 - ≥45分 → BUY
 - 38-44分 → WATCH  
 - <20分 → EXIT
@@ -157,6 +157,24 @@ Remove generated files older than 7 days.
 - User wants to add/remove → run `watchlist.py add/remove`
 - Daily automation → run `daily_digest.py` (followed by `cleanup.py`)
 - On first interaction → self-introduction text (no script needed)
+
+## Data Sources (Locked v8.0, May 5, 2026)
+
+| Data | Source | Provider |
+|------|--------|----------|
+| A-share OHLCV | `ak.stock_zh_a_hist()` | Eastmoney via akshare |
+| HK stock OHLCV | `ak.stock_hk_hist()` | Eastmoney via akshare |
+| US stock OHLCV | `ak.stock_us_hist()` | Eastmoney via akshare |
+| VIX (CBOE) | FRED API (`VIXCLS`) | St. Louis Fed |
+| China QVIX (50ETF) | `ak.index_option_50etf_qvix()` | optbbs.com via akshare |
+| US/CN Bond Yields | `ak.bond_zh_us_rate()` | Eastmoney via akshare |
+| China Macro (CPI/PMI/M2/LPR) | `ak.macro_china_*` | Eastmoney via akshare |
+| US Macro (CPI/Unemployment) | `ak.macro_usa_*` | Eastmoney via akshare |
+| USD/CNY | `ak.currency_boc_sina()` | BOC via akshare |
+| Northbound Flow | `ak.stock_hsgt_hist_em()` | Eastmoney via akshare |
+
+**Rate Limit:** Token bucket (3 req/s Eastmoney, 1 req/s FRED) + exponential backoff (3 retries).
+**yfinance:** Fully removed (May 5, 2026). All data now from akshare + FRED API.
 
 ## Important Rules
 1. **Never make up scores.** Always run the actual scoring engine via scripts.
