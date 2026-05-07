@@ -41,7 +41,16 @@ _grid_params = _load_grid_params()
 # LOCKED PARAMETERS (do not modify without re-running grid search)
 # ═══════════════════════════════════════════════════════════════════
 
-WEIGHTS = _grid_params.get("weights", {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2: fib now in weight system
+# ═══════════════════════════════════════════════════════════════════
+# v9.2: Named constants — do not modify without re-running backtest
+# ═══════════════════════════════════════════════════════════════════
+BEAR_TREND_DISCOUNT = 0.40    # Bear regime trend signal weight
+MA20_PENALTY_A_HK = 0.65      # A/HK price-below-MA20 counter-trend penalty
+MA20_PENALTY_US = 0.75        # US price-below-MA20 penalty (lighter)
+VOL_ANOMALY_MULT = 1.5        # Volume anomaly threshold (×MA20)
+NATIONAL_TEAM_MULT = 2.5      # National team volume threshold (×MA20)
+
+WEIGHTS = _grid_params.get("weights", {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2
 
 SIGNAL_SCORES = {
     # Contrarian (DZH)
@@ -247,10 +256,10 @@ def precompute(df_daily: pd.DataFrame, df_weekly: pd.DataFrame) -> dict:
     result["weekly_fib_support"] = fib_support
 
     # ── Volume ──────────────────────────────────────────────
-    result["vol_anomaly"] = volume > (volume.rolling(20).mean() * 1.5)
+    result["vol_anomaly"] = volume > (volume.rolling(20).mean() * VOL_ANOMALY_MULT)
     # v9.2: national_team — stricter institutional volume (range-bound accumulation)
     result["national_team"] = (
-        (volume > volume.rolling(20).mean() * 2.5) &
+        (volume > volume.rolling(20).mean() * NATIONAL_TEAM_MULT) &
         result["price_above_ma50"] &
         (result["adx_strong"] == False)
     )
@@ -337,7 +346,7 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         trend += SIGNAL_SCORES["ma_golden_cross"]; active.append("ma_golden_cross")
     if precomputed["macd_golden"].iloc[i]:
         trend += SIGNAL_SCORES["macd_golden"]; active.append("macd_golden")
-    tech += trend if bull else int(trend * 0.40)  # v8.2: 0.50→0.40 — moderate bear penalty
+    tech += trend if bull else int(trend * BEAR_TREND_DISCOUNT)
 
     # ── Momentum ─────────────────────────────────────────────
     if precomputed["kdj_golden"].iloc[i]:
@@ -378,9 +387,9 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     # Weekly MA20 filter: penalty for counter-trend in bear (v8.2: market-specific)
     if not precomputed["weekly_ma20_up"].iloc[i] and not bull:
         if market in ("A", "HK", "CN_IDX"):
-            tech = int(tech * 0.65)  # v8.2: 0.70→0.65 — stronger for A/HK
+            tech = int(tech * MA20_PENALTY_A_HK)  # A/HK counter-trend
         else:
-            tech = int(tech * 0.75)  # v8.2: US — lighter (US trends differently)
+            tech = int(tech * MA20_PENALTY_US)      # US counter-trend (lighter)
 
     # v9.0-alpha: BB sell as trend-graded penalty (removed EXIT override)
     bb_sell_now = precomputed["bb_sell"].iloc[i]
@@ -504,9 +513,10 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
                 qv_val = float(qv.iloc[-1])
                 if len(qv) >= 60:
                     lookback = qv.tail(252)
-                    very_low = lookback.quantile(0.15)
-                    low = lookback.quantile(0.35)
-                    high = lookback.quantile(0.75)
+                    QVIX_P15 = 0.15; QVIX_P35 = 0.35; QVIX_P75 = 0.75  # v9.2 named
+                    very_low = lookback.quantile(QVIX_P15)
+                    low = lookback.quantile(QVIX_P35)
+                    high = lookback.quantile(QVIX_P75)
                 else:
                     very_low = QVIX_THRESHOLDS["very_low"]
                     low = QVIX_THRESHOLDS["low"]
