@@ -5,9 +5,8 @@ EXPLORER SCORING ENGINE — Experimental (v9.0-alpha, May 6, 2026)
 THIS IS THE EXPERIMENTAL EXPLORER. Changes from v8.3:
   v9.0-alpha: BB sell -> trend-graded penalty (removed EXIT override)
               Adaptive chain resonance (BOLL->KDJ->MACD, 3-8 bar window)
-              Chain bonuses: C2 +12pt, C3 +18pt
-              NOTE: Thresholds/weights NOT recalibrated yet.
-              Performance vs v8.3 is UNKNOWN. Use gushen v8.3 for production.
+              Chain bonuses: C2 +15pt, C3 +22pt (v9.1 calibrated on 17 stocks)
+              QVIX thresholds: adaptive rolling percentiles (v9.2)
 
 Usage:
     from strategy.scoring import score
@@ -66,8 +65,8 @@ SIGNAL_SCORES = {
     "fib_divergence_combo": 22,
     "fib_kdj_combo":       18,
     # v9.0-alpha: adaptive BOLL->KDJ->MACD chain resonance
-    "boll_kdj_chain":      _grid_params.get("c2_bonus", 12),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
-    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 18),  # C3: BOLL -> KDJ -> MACD (3-step chain)
+    "boll_kdj_chain":      _grid_params.get("c2_bonus", 15),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
+    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 22),  # C3: BOLL -> KDJ -> MACD (3-step chain)
     # Capital
     "volume_anomaly":      8,
     "northbound_inflow":   6,
@@ -498,16 +497,25 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
                 elif m > 7.0: macro_score += MACRO_SCORES["china_m2_above_7"]
         if precomputed.get("national_team") is not None and precomputed["national_team"].iloc[i]:
             macro_score += MACRO_SCORES["national_team"]; active.append("national_team")
-        # v8.0: China QVIX (50ETF options volatility index)
+        # v9.2: China QVIX — adaptive rolling percentiles (keep fixed as fallback)
         if "china_qvix" in macro_data:
             qv = macro_data["china_qvix"][macro_data["china_qvix"].index <= bar_date]
             if len(qv) > 0 and pd.notna(qv.iloc[-1]):
                 qv_val = float(qv.iloc[-1])
-                if qv_val < QVIX_THRESHOLDS["very_low"]:
+                if len(qv) >= 60:
+                    lookback = qv.tail(252)
+                    very_low = lookback.quantile(0.15)
+                    low = lookback.quantile(0.35)
+                    high = lookback.quantile(0.75)
+                else:
+                    very_low = QVIX_THRESHOLDS["very_low"]
+                    low = QVIX_THRESHOLDS["low"]
+                    high = QVIX_THRESHOLDS["high"]
+                if qv_val < very_low:
                     macro_score += MACRO_SCORES["china_qvix_very_low"]; active.append("qvix_very_low")
-                elif qv_val < QVIX_THRESHOLDS["low"]:
+                elif qv_val < low:
                     macro_score += MACRO_SCORES["china_qvix_low"]; active.append("qvix_low")
-                elif qv_val > QVIX_THRESHOLDS["high"]:
+                elif qv_val > high:
                     macro_score += MACRO_SCORES["china_qvix_high"]; active.append("qvix_fear")
 
     # ── Fundamental (v8.3: dynamic earnings quality) ────────
