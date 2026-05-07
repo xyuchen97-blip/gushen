@@ -42,7 +42,7 @@ _grid_params = _load_grid_params()
 # LOCKED PARAMETERS (do not modify without re-running grid search)
 # ═══════════════════════════════════════════════════════════════════
 
-WEIGHTS = _grid_params.get("weights", {"technical": 40, "capital": 25, "fundamental": 15, "macro": 20})
+WEIGHTS = _grid_params.get("weights", {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2: fib now in weight system
 
 SIGNAL_SCORES = {
     # Contrarian (DZH)
@@ -85,6 +85,7 @@ MACRO_SCORES = {
     "vix_below_25":     2,
     "spread_above_05":  4,
     "spread_positive":  2,
+    "spread_inverted": -5,  # v9.2: yield curve inversion penalty
     "usdcny_cnhk":      4,
     "usdcny_us":        2,
     "cpi_declining":    2,
@@ -248,6 +249,12 @@ def precompute(df_daily: pd.DataFrame, df_weekly: pd.DataFrame) -> dict:
 
     # ── Volume ──────────────────────────────────────────────
     result["vol_anomaly"] = volume > (volume.rolling(20).mean() * 1.5)
+    # v9.2: national_team — stricter institutional volume (range-bound accumulation)
+    result["national_team"] = (
+        (volume > volume.rolling(20).mean() * 2.5) &
+        result["price_above_ma50"] &
+        (result["adx_strong"] == False)
+    )
 
     return result
 
@@ -430,34 +437,36 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         # VIX
         if "vix" in macro_data and not macro_data["vix"].empty:
             vv = macro_data["vix"][macro_data["vix"].index <= bar_date]
-            if len(vv) > 0:
+            if len(vv) > 0 and pd.notna(vv.iloc[-1]):
                 v = float(vv.iloc[-1])
                 if v < 20: macro_score += MACRO_SCORES["vix_below_20"]
                 elif v < 25: macro_score += MACRO_SCORES["vix_below_25"]
         # USD/CNY
         if "usdcny" in macro_data and not macro_data["usdcny"].empty:
             cv = macro_data["usdcny"][macro_data["usdcny"].index <= bar_date]
-            if len(cv) > 20 and float(cv.iloc[-1]) <= float(cv.iloc[-20:].mean()):
-                macro_score += MACRO_SCORES["usdcny_cnhk" if market in ("A","CN_IDX","HK") else "usdcny_us"]
+            if len(cv) > 20 and pd.notna(cv.iloc[-1]) and pd.notna(cv.iloc[-20:]).all():
+                if float(cv.iloc[-1]) <= float(cv.iloc[-20:].mean()):
+                    macro_score += MACRO_SCORES["usdcny_cnhk" if market in ("A","CN_IDX","HK") else "usdcny_us"]
         # Yield curve spread (10Y-2Y from bond_zh_us_rate)
         if "us_spread_10y2y" in macro_data:
             sv = macro_data["us_spread_10y2y"][macro_data["us_spread_10y2y"].index <= bar_date]
-            if len(sv) > 0:
+            if len(sv) > 0 and pd.notna(sv.iloc[-1]):
                 sp = float(sv.iloc[-1])
                 if sp > 0.5: macro_score += MACRO_SCORES["spread_above_05"]
                 elif sp > 0: macro_score += MACRO_SCORES["spread_positive"]
+                else: macro_score += MACRO_SCORES.get("spread_inverted", -5); active.append("yield_curve_inverted")  # v9.2
     # US Macro
     if macro_data:
         if "us_cpi_yoy" in macro_data:
             cv = macro_data["us_cpi_yoy"][macro_data["us_cpi_yoy"].index <= bar_date]
-            if len(cv) > 3:
+            if len(cv) > 3 and pd.notna(cv.iloc[-1]) and pd.notna(cv.iloc[max(0, len(cv)-4)]):
                 c = float(cv.iloc[-1])
                 p = float(cv.iloc[max(0, len(cv)-4)])
                 if c < p: macro_score += MACRO_SCORES["cpi_declining"]
                 if c < 3.0: macro_score += MACRO_SCORES["cpi_below_3"]
         if "us_unemployment" in macro_data:
             uv = macro_data["us_unemployment"][macro_data["us_unemployment"].index <= bar_date]
-            if len(uv) > 0:
+            if len(uv) > 0 and pd.notna(uv.iloc[-1]):
                 u = float(uv.iloc[-1])
                 if u < 4.0: macro_score += MACRO_SCORES["unemp_below_4"]
                 elif u < 5.0: macro_score += MACRO_SCORES["unemp_below_5"]
@@ -465,27 +474,27 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     if market in ("A", "CN_IDX", "HK") and macro_data:
         if "china_lpr1y" in macro_data:
             lv = macro_data["china_lpr1y"][macro_data["china_lpr1y"].index <= bar_date]
-            if len(lv) > 2:
+            if len(lv) > 2 and pd.notna(lv.iloc[-1]) and pd.notna(lv.iloc[max(0, len(lv)-2)]):
                 l_now = float(lv.iloc[-1]); l_past = float(lv.iloc[max(0, len(lv)-2)])
                 if l_now < l_past: macro_score += MACRO_SCORES["lpr_cut"]; active.append("lpr_easing")
         if "china_cpi" in macro_data:
             cv = macro_data["china_cpi"][macro_data["china_cpi"].index <= bar_date]
-            if len(cv) > 0 and float(cv.iloc[-1]) < 1.0: macro_score += MACRO_SCORES["china_cpi_low"]
+            if len(cv) > 0 and pd.notna(cv.iloc[-1]) and float(cv.iloc[-1]) < 1.0: macro_score += MACRO_SCORES["china_cpi_low"]
         if "china_pmi" in macro_data:
             pv = macro_data["china_pmi"][macro_data["china_pmi"].index <= bar_date]
-            if len(pv) > 0 and float(pv.iloc[-1]) > 50: macro_score += MACRO_SCORES["china_pmi_ok"]
+            if len(pv) > 0 and pd.notna(pv.iloc[-1]) and float(pv.iloc[-1]) > 50: macro_score += MACRO_SCORES["china_pmi_ok"]
         if "china_m2_yoy" in macro_data:
             mv = macro_data["china_m2_yoy"][macro_data["china_m2_yoy"].index <= bar_date]
-            if len(mv) > 0:
+            if len(mv) > 0 and pd.notna(mv.iloc[-1]):
                 m = float(mv.iloc[-1])
                 if m > 9.0: macro_score += MACRO_SCORES["china_m2_above_9"]; active.append("m2_expanding")
                 elif m > 7.0: macro_score += MACRO_SCORES["china_m2_above_7"]
-        if precomputed.get("vol_anomaly") is not None and precomputed["vol_anomaly"].iloc[i]:
+        if precomputed.get("national_team") is not None and precomputed["national_team"].iloc[i]:
             macro_score += MACRO_SCORES["national_team"]; active.append("national_team")
         # v8.0: China QVIX (50ETF options volatility index)
         if "china_qvix" in macro_data:
             qv = macro_data["china_qvix"][macro_data["china_qvix"].index <= bar_date]
-            if len(qv) > 0:
+            if len(qv) > 0 and pd.notna(qv.iloc[-1]):
                 qv_val = float(qv.iloc[-1])
                 if qv_val < QVIX_THRESHOLDS["very_low"]:
                     macro_score += MACRO_SCORES["china_qvix_very_low"]; active.append("qvix_very_low")
@@ -513,7 +522,9 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     cap_n   = min(cap / 14.0, 1.0) * w["capital"]
     fund_n  = min(min(fund_score, 15) / 15.0, 1.0) * w["fundamental"]  # v8.3: base 10=neutral, max 15
     macro_n = min(macro_score / 35.0, 1.0) * w["macro"]
-    composite = tech_n + cap_n + fund_n + macro_n + fib_bonus
+    if macro_score == 0 and macro_data:
+        macro_n = 0.5 * w["macro"]  # v9.2: no macro data available → neutral 50%
+    composite = tech_n + cap_n + fund_n + macro_n + min(fib_bonus / 5.0, 1.0) * w.get("fibonacci", 0)  # v9.2: fib normalized
 
     # ── Action (v8.2: regime-aware + market-specific) ──────
     # Pick thresholds based on market and regime
