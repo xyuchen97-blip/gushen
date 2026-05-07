@@ -5,7 +5,7 @@ EXPLORER SCORING ENGINE — Experimental (v9.0-alpha, May 6, 2026)
 THIS IS THE EXPERIMENTAL EXPLORER. Changes from v8.3:
   v9.0-alpha: BB sell -> trend-graded penalty (removed EXIT override)
               Adaptive chain resonance (BOLL->KDJ->MACD, 3-8 bar window)
-              Chain bonuses: C2 +15pt, C3 +22pt (v9.1 calibrated on 17 stocks)
+              Chain bonuses: C2 +12pt, C3 +18pt (re-validated for adaptive windows v9.2)
               QVIX thresholds: adaptive rolling percentiles (v9.2)
 
 Usage:
@@ -65,8 +65,8 @@ SIGNAL_SCORES = {
     "fib_divergence_combo": 22,
     "fib_kdj_combo":       18,
     # v9.0-alpha: adaptive BOLL->KDJ->MACD chain resonance
-    "boll_kdj_chain":      _grid_params.get("c2_bonus", 15),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
-    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 22),  # C3: BOLL -> KDJ -> MACD (3-step chain)
+    "boll_kdj_chain":      _grid_params.get("c2_bonus", 12),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
+    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 18),  # C3: BOLL -> KDJ -> MACD (3-step chain)
     # Capital
     "volume_anomaly":      8,
     "northbound_inflow":   6,
