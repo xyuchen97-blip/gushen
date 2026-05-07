@@ -1,6 +1,6 @@
 ---
 name: 股神
-description: A-share/HK stock analysis and watchlist management. Capital-preservation focused multi-factor strategy (14 technical signals, 4 macro dimensions, Fibonacci resonance). Triggers on: 股神, 股票分析, 个股分析, 观察清单, 加入观察, 移除观察, daily stock recommendation.
+description: "Multi-market quantitative stock strategy (A/HK/US). Adaptive chain resonance, graded BB penalty, MFF factor for A-shares, PB-based sector filtering. v9.1 calibrated on 22 stocks (2021-2026). Triggers on: 股神, 股票分析, 个股分析, 观察清单, daily stock recommendation."
 agent_created: true
 ---
 
@@ -19,10 +19,14 @@ agent_created: true
 - 🔄 **支持A股、港股、美股**：A股和港股最为擅长（2022-2026回测：A股全场景正Alpha +5.4%）
 - 📊 **动态基本面评分**：ROE、盈利增长、营收增长、利润率（akshare实时拉取）
 
-### 策略速览（v8.3）
-评分引擎：**14个技术信号** × **11个宏观/资金流** × **实时基本面** × **斐波那契共振**，加权计算 0-105 分。
-- **场景自适应**：BULL≥45 / BEAR≥46 → BUY，US≥50 → BUY，<20 → EXIT
-- 2022-2026 回测（30只）：A股+5.4% α，HK +10.6%（BEAR），CRASH +16.1%
+### 策略速览（v9.1）
+评分引擎：**14技术信号 × 自适应链共振 × 趋势分级BB惩罚 × 三市场独立权重 × A股MFF因子**
+- **链共振**: BOLL→KDJ→MACD 自适应窗口(3-8 bar)，C2+15pt, C3+22pt
+- **BB惩罚**: 趋势分级 -8/-5/-3pt（替代v8.3硬覆写）
+- **三市场权重**: US T40/C25, HK T35/C25, A T30/C30
+- **A股增强**: 主力资金流MFF ±3/6pt, PB>4 成长股筛选
+- **2021-2026 回测（17只）**: Return +88% | MaxDD -13% | Sharpe 1.38 | 12/17>0
+  - US: S=2.00 (7 stocks, 无TSLA) | HK: S=1.16 (6 stocks) | A: S=0.63 (4 stocks, PB>4)
 - 美股 BULL 跑不赢买入持有（已知限制），CRASH 防御极强（6/7 正 α）
 
 ### 最佳使用场景

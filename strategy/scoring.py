@@ -1,26 +1,18 @@
 """
-STRATEGY SCORING ENGINE — Single Source of Truth (LOCKED v8.0, May 5, 2026)
-===========================================================================
+EXPLORER SCORING ENGINE — Experimental (v9.0-alpha, May 6, 2026)
+=================================================================
 
-THIS IS THE DEFINITIVE SCORING MODULE. Any LLM or agent reading this file
-should produce IDENTICAL composite scores for any given input.
-
-v8.0: China QVIX factor added (50ETF options VIX), yield spread from
-      bond_zh_us_rate, locked data sources documented.
+THIS IS THE EXPERIMENTAL EXPLORER. Changes from v8.3:
+  v9.0-alpha: BB sell -> trend-graded penalty (removed EXIT override)
+              Adaptive chain resonance (BOLL->KDJ->MACD, 3-8 bar window)
+              Chain bonuses: C2 +12pt, C3 +18pt
+              NOTE: Thresholds/weights NOT recalibrated yet.
+              Performance vs v8.3 is UNKNOWN. Use gushen v8.3 for production.
 
 Usage:
     from strategy.scoring import score
-
     result = score(df_daily, df_weekly, ticker="600519", market="A",
                     macro_data=macro, weights=None)
-
-    print(result["composite"])   # 0-105
-    print(result["action"])      # BUY / EXIT / WATCH / HOLD
-    print(result["active"])      # list of triggered signals
-    print(result["reasoning"])   # human-readable breakdown
-
-Determinism: Same ticker + same OHLCV + same macro → identical score every time.
-Verified: 3-run test on Moutai 600519 — 22 sample scores identical to 15 decimal places.
 """
 
 import sys
@@ -34,11 +26,23 @@ from dzh_indicators import golden_pit, jiu_zhuan, band_king
 from .bollinger import compute_weekly_bb, bb_weekly_sell_signal, bb_weekly_buy_signal
 from .fibonacci import score_fibonacci
 
+# v9.0-alpha: Runtime config override (for grid search)
+# If strategy/_params.json exists, override BB penalty and chain bonuses
+def _load_grid_params():
+    import json, os
+    import sys as _sys
+    config_path = os.path.join(os.path.dirname(__file__), "_params.json")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            return json.load(f)
+    return {}
+_grid_params = _load_grid_params()
+
 # ═══════════════════════════════════════════════════════════════════
 # LOCKED PARAMETERS (do not modify without re-running grid search)
 # ═══════════════════════════════════════════════════════════════════
 
-WEIGHTS = {"technical": 40, "capital": 25, "fundamental": 15, "macro": 20}
+WEIGHTS = _grid_params.get("weights", {"technical": 40, "capital": 25, "fundamental": 15, "macro": 20})
 
 SIGNAL_SCORES = {
     # Contrarian (DZH)
@@ -61,6 +65,9 @@ SIGNAL_SCORES = {
     # High conviction combos
     "fib_divergence_combo": 22,
     "fib_kdj_combo":       18,
+    # v9.0-alpha: adaptive BOLL->KDJ->MACD chain resonance
+    "boll_kdj_chain":      _grid_params.get("c2_bonus", 12),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
+    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 18),  # C3: BOLL -> KDJ -> MACD (3-step chain)
     # Capital
     "volume_anomaly":      8,
     "northbound_inflow":   6,
@@ -96,17 +103,16 @@ MACRO_SCORES = {
     "china_qvix_high":     -2,  # > P75 → fear penalty
 }
 
-THRESHOLDS = {
-    "entry":      45,   # bull market BUY
-    "entry_bear": 46,   # v8.2: bear market BUY — slightly higher bar
-    "watchlist":  38,   # bull market WATCH
-    "watch_bear": 39,   # v8.2: bear market WATCH — slightly tighter
-    "exit":       20,   # exit threshold (all markets)
+THRESHOLDS = _grid_params.get("thresholds_A", {
+    "entry":      45,
+    "entry_bear": 46,
+    "watchlist":  38,
+    "watch_bear": 39,
+    "exit":       20,
     "min_hold":    5,
-}
+})
 
-# v8.2: Market-specific thresholds for US (higher vol regime)
-US_THRESHOLDS = {"entry": 50, "watchlist": 42, "exit": 22}
+US_THRESHOLDS = _grid_params.get("thresholds_US", {"entry": 50, "watchlist": 42, "exit": 22})
 
 # v8.0: China QVIX thresholds (percentile-based from full history)
 QVIX_THRESHOLDS = {
@@ -317,6 +323,34 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     elif precomputed["weekly_fib_support"].iloc[i] and precomputed["kdj_oversold"].iloc[i]:
         tech += SIGNAL_SCORES["fib_kdj_combo"]; active.append("fib_kdj_combo")
 
+    # v9.0-alpha: Adaptive chain resonance (BOLL->KDJ->MACD, 3-8 bar window)
+    adx_val = None
+    try:
+        from .bollinger import compute_weekly_bb
+    except: pass
+    chain_window = 5  # default
+    if precomputed["adx_strong"].iloc[i]:
+        chain_window = 3  # high volatility: fast signals
+    elif i >= 30 and not precomputed["adx_strong"].iloc[i-30:i].any():
+        chain_window = 8  # low volatility: slower signals
+    boll_hit = -1
+    for j in range(max(0, i - chain_window), i + 1):
+        if precomputed["bb_buy"].iloc[j]:
+            boll_hit = j; break
+    if boll_hit >= 0:
+        kdj_hit = -1
+        for j in range(boll_hit + 1, min(boll_hit + chain_window + 1, i + 1)):
+            if precomputed["kdj_oversold"].iloc[j] or precomputed["kdj_golden"].iloc[j]:
+                kdj_hit = j; break
+        if kdj_hit >= 0:
+            tech += SIGNAL_SCORES["boll_kdj_chain"]; active.append("boll_kdj_chain")
+            macd_hit = -1
+            for j in range(kdj_hit + 1, min(kdj_hit + chain_window + 1, i + 1)):
+                if precomputed["macd_golden"].iloc[j] or (precomputed["macd_hist"].iloc[j] > 0 and j - kdj_hit <= 3):
+                    macd_hit = j; break
+            if macd_hit >= 0:
+                tech += SIGNAL_SCORES["boll_kdj_macd_chain"]; active.append("boll_kdj_macd_chain")
+
     # ── Sell penalties ───────────────────────────────────────
     if precomputed["sell_signal"].iloc[i]:
         tech += SELL_PENALTIES["nine_turns_sell"]
@@ -335,8 +369,19 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         else:
             tech = int(tech * 0.75)  # v8.2: US — lighter (US trends differently)
 
-    # BB Weekly sell override
+    # v9.0-alpha: BB sell as trend-graded penalty (removed EXIT override)
     bb_sell_now = precomputed["bb_sell"].iloc[i]
+    if bb_sell_now:
+        adx_strong = precomputed["adx_strong"].iloc[i]
+        ma50_check = precomputed["price_above_ma50"].iloc[i]
+        vol_burst = precomputed["vol_anomaly"].iloc[i]
+        if adx_strong and ma50_check and vol_burst:
+            tech -= _grid_params.get("bb_strong", 8); active.append("bb_sell:strong")
+        elif adx_strong or ma50_check:
+            tech -= _grid_params.get("bb_moderate", 5); active.append("bb_sell:moderate")
+        else:
+            tech -= _grid_params.get("bb_weak", 3); active.append("bb_sell:weak")
+        tech = max(0, tech)
 
     # ── Capital ──────────────────────────────────────────────
     if precomputed["vol_anomaly"].iloc[i]:
@@ -345,6 +390,24 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         nb = macro_data["northbound_flow"][macro_data["northbound_flow"].index <= bar_date]
         if len(nb) > 0 and float(nb.iloc[-1]) > 0:
             cap += SIGNAL_SCORES["northbound_inflow"]; active.append("northbound_inflow")
+
+    # v9.1: A-stock main force flow factor — only for growth/tech sectors
+    # Growth stocks (科技/消费/制造/医药): MFF ΔS=+1.09~+2.15
+    # Defensive stocks (银行/公用/矿业): MFF hurts, skip
+    if market == "A" and macro_data and "mff" in macro_data:
+        a_sector = macro_data.get("a_sector", "defensive")  # default: skip
+        if a_sector == "growth":
+            mff_list = macro_data["mff"]
+            if bar_date in mff_list:
+                mf = mff_list[bar_date]
+                avg_super = mf.get("super_ratio", 0)
+                avg_mf = mf.get("mf_ratio", 0)
+                if avg_super > 3:
+                    cap += 6; active.append("mff_strong")
+                elif avg_mf > 2:
+                    cap += 3; active.append("mff_moderate")
+                elif avg_mf < -8:
+                    cap -= 4; active.append("mff_sell")
 
     # ── Fibonacci standalone bonus ───────────────────────────
     fib_score = 0
@@ -459,13 +522,8 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     watch_thresh = t["watchlist"] if bull else t.get("watch_bear", t["watchlist"])
     exit_thresh  = t["exit"]
     
-    # BB Sell: US stocks need MA50 confirmation (higher vol → more false BB touches)
-    if bb_sell_now:
-        if market == "US" and precomputed["price_above_ma50"].iloc[i]:
-            action = "HOLD"  # v8.2: US BB override only if also below MA50
-        else:
-            action = "EXIT"
-    elif composite >= entry_thresh:
+    # v9.0-alpha: Action determination (no BB override — all score-based)
+    if composite >= entry_thresh:
         action = "BUY"
     elif composite < exit_thresh:
         action = "EXIT"  # v8.2: unified EXIT — removed bear exception (too lenient)
