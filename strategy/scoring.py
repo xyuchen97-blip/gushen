@@ -256,6 +256,30 @@ def precompute(df_daily: pd.DataFrame, df_weekly: pd.DataFrame) -> dict:
         (result["adx_strong"] == False)
     )
 
+    # v9.2: Pre-compute chain resonance patterns for all window sizes
+    n = len(close)
+    bb_buy = result["bb_buy"].values if hasattr(result["bb_buy"], "values") else np.array(result["bb_buy"])
+    kdj_fire = (result["kdj_oversold"] | result["kdj_golden"]).values
+    macd_ok = (result["macd_golden"] | (result["macd_hist"] > 0)).values
+    adx_strong = result["adx_strong"].values
+    for w in [3, 5, 8]:
+        c2_arr = np.zeros(n, dtype=bool)
+        c3_arr = np.zeros(n, dtype=bool)
+        for i in range(w, n):
+            if bb_buy[i-w:i+1].any():
+                b_idx = i - w + np.argmax(bb_buy[i-w:i+1])
+                if b_idx + 1 <= i:
+                    k_slice = kdj_fire[b_idx+1:min(b_idx + w + 1, i + 1)]
+                    if k_slice.any():
+                        c2_arr[i] = True
+                        k_idx = b_idx + 1 + np.argmax(k_slice)
+                        if k_idx + 1 <= i:
+                            m_slice = macd_ok[k_idx+1:min(k_idx + w + 1, i + 1)]
+                            if m_slice.any():
+                                c3_arr[i] = True
+        result[f"chain_c2_w{w}"] = c2_arr
+        result[f"chain_c3_w{w}"] = c3_arr
+
     return result
 
 
@@ -330,33 +354,16 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     elif precomputed["weekly_fib_support"].iloc[i] and precomputed["kdj_oversold"].iloc[i]:
         tech += SIGNAL_SCORES["fib_kdj_combo"]; active.append("fib_kdj_combo")
 
-    # v9.0-alpha: Adaptive chain resonance (BOLL->KDJ->MACD, 3-8 bar window)
-    adx_val = None
-    try:
-        from .bollinger import compute_weekly_bb
-    except: pass
+    # v9.2: Chain resonance — O(1) lookup from precomputed (vectorized in precompute)
     chain_window = 5  # default
     if precomputed["adx_strong"].iloc[i]:
-        chain_window = 3  # high volatility: fast signals
+        chain_window = 3
     elif i >= 30 and not precomputed["adx_strong"].iloc[i-30:i].any():
-        chain_window = 8  # low volatility: slower signals
-    boll_hit = -1
-    for j in range(max(0, i - chain_window), i + 1):
-        if precomputed["bb_buy"].iloc[j]:
-            boll_hit = j; break
-    if boll_hit >= 0:
-        kdj_hit = -1
-        for j in range(boll_hit + 1, min(boll_hit + chain_window + 1, i + 1)):
-            if precomputed["kdj_oversold"].iloc[j] or precomputed["kdj_golden"].iloc[j]:
-                kdj_hit = j; break
-        if kdj_hit >= 0:
-            tech += SIGNAL_SCORES["boll_kdj_chain"]; active.append("boll_kdj_chain")
-            macd_hit = -1
-            for j in range(kdj_hit + 1, min(kdj_hit + chain_window + 1, i + 1)):
-                if precomputed["macd_golden"].iloc[j] or (precomputed["macd_hist"].iloc[j] > 0 and j - kdj_hit <= 3):
-                    macd_hit = j; break
-            if macd_hit >= 0:
-                tech += SIGNAL_SCORES["boll_kdj_macd_chain"]; active.append("boll_kdj_macd_chain")
+        chain_window = 8
+    if precomputed.get(f"chain_c2_w{chain_window}", [False])[i]:
+        tech += SIGNAL_SCORES["boll_kdj_chain"]; active.append("boll_kdj_chain")
+        if precomputed.get(f"chain_c3_w{chain_window}", [False])[i]:
+            tech += SIGNAL_SCORES["boll_kdj_macd_chain"]; active.append("boll_kdj_macd_chain")
 
     # ── Sell penalties ───────────────────────────────────────
     if precomputed["sell_signal"].iloc[i]:
