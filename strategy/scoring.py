@@ -50,7 +50,7 @@ MA20_PENALTY_US = 0.75        # US price-below-MA20 penalty (lighter)
 VOL_ANOMALY_MULT = 1.5        # Volume anomaly threshold (×MA20)
 NATIONAL_TEAM_MULT = 2.5      # National team volume threshold (×MA20)
 
-WEIGHTS = _grid_params.get("weights", {"technical": 36, "capital": 26, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2 calibrated
+WEIGHTS = _grid_params.get("weights", {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2
 
 SIGNAL_SCORES = {
     # Contrarian (DZH)
@@ -74,8 +74,8 @@ SIGNAL_SCORES = {
     "fib_divergence_combo": 22,
     "fib_kdj_combo":       18,
     # v9.0-alpha: adaptive BOLL->KDJ->MACD chain resonance
-    "boll_kdj_chain":      _grid_params.get("c2_bonus", 12),  # C2: BOLL buy -> KDJ fire (vol-adaptive window)
-    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 18),  # C3: BOLL -> KDJ -> MACD (3-step chain)
+    "boll_kdj_chain":      _grid_params.get("c2_bonus", 15),  # C2: v9.1 calibrated
+    "boll_kdj_macd_chain": _grid_params.get("c3_bonus", 22),  # C3: v9.1 calibrated
     # Capital
     "volume_anomaly":      8,
     "northbound_inflow":   6,
