@@ -50,7 +50,7 @@ MA20_PENALTY_US = 0.75        # US price-below-MA20 penalty (lighter)
 VOL_ANOMALY_MULT = 1.5        # Volume anomaly threshold (×MA20)
 NATIONAL_TEAM_MULT = 2.5      # National team volume threshold (×MA20)
 
-WEIGHTS = _grid_params.get("weights", {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2
+WEIGHTS = _grid_params.get("weights", {"technical": 36, "capital": 26, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.2 calibrated
 
 SIGNAL_SCORES = {
     # Contrarian (DZH)
