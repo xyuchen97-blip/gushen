@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dzh_indicators import golden_pit, jiu_zhuan, band_king
 from .bollinger import compute_weekly_bb, bb_weekly_sell_signal, bb_weekly_buy_signal
 from .fibonacci import score_fibonacci
+from .elliot_wave import detect_wave5_target, detect_right_shoulder, triple_confirm
 
 # v9.0-alpha: Runtime config override (for grid search)
 # If strategy/_params.json exists, override BB penalty and chain bonuses
@@ -406,6 +407,10 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         tech = max(0, tech)
 
     # ── Capital ──────────────────────────────────────────────
+    # v9.4: Triple confirmation bonus (contrarian ∩ volume ∩ momentum)
+    triple = triple_confirm(precomputed, i)
+    if triple["triple_confirm"]:
+        cap += 3; active.append("triple_confirm")
     if precomputed["vol_anomaly"].iloc[i]:
         cap += SIGNAL_SCORES["volume_anomaly"]
     if market == "A" and macro_data and "northbound_flow" in macro_data:
