@@ -413,6 +413,16 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
         if len(nb) > 0 and float(nb.iloc[-1]) > 0:
             cap += SIGNAL_SCORES["northbound_inflow"]; active.append("northbound_inflow")
 
+    # v9.3: A-stock margin financing contarian factor
+    if market == "A" and macro_data and "margin" in macro_data:
+        margin_hist = macro_data["margin"]
+        if bar_date in margin_hist:
+            mr = margin_hist[bar_date]
+            if mr.get("pct_5d", 0) > 5:
+                cap -= 5; active.append("margin_overheat")
+            elif mr.get("pct_5d", 0) < -5:
+                cap += 3; active.append("margin_panic")
+
     # v9.1: A-stock main force flow factor — only for growth/tech sectors
     # Growth stocks (科技/消费/制造/医药): MFF ΔS=+1.09~+2.15
     # Defensive stocks (银行/公用/矿业): MFF hurts, skip
