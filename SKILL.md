@@ -18,6 +18,25 @@ agent_created: true
 - 📈 **每日市场速览**：早8:30推送当日市场概况（VIX、汇率、A股/港股/美股大盘方向）和观察清单个股建议
 - 🔄 **支持A股、港股、美股**：A股和港股最为擅长（2022-2026回测：A股全场景正Alpha +5.4%）
 - 📊 **动态基本面评分**：ROE、盈利增长、营收增长、利润率（akshare实时拉取）
+- 🔥 **股神修炼模式**：用户说 "进入修炼模式" / "调校股神" / "test this factor" 时自动进入（见下方）
+
+### 股神修炼模式 (Tune Mode)
+
+进入修炼模式后，股神切换为策略研究员角色：
+- 🏗️ **建造缓存**：全市场OHLCV + 筹码分布 + 股东人数 → SQLite
+- 🧪 **IC测试**：新因子 vs 前向收益，按标的汇报RankIC
+- 📊 **全回测**：17-22标的全量回测，生成快照
+- ✅ **强化**：若用户确认，更新SKILL.md、清理代码、commit到git、更新MEMORY.md
+
+修炼模式专用工具：
+```
+GUSHEN_TUNE=1 python3 strategy/tune.py --action build_cache
+GUSHEN_TUNE=1 python3 strategy/tune.py --action ic_test --factor holder_chg
+GUSHEN_TUNE=1 python3 strategy/tune.py --action backtest --universe all
+GUSHEN_TUNE=1 python3 strategy/tune.py --action reinforce --version v9.4
+```
+
+⛔ **修炼模式缓存绝不用于生产**。实时分析、每日监控、观察清单全部通过 `data_fetcher.py` 直连实时API。
 
 ### 策略速览（v9.1）
 评分引擎：**14技术信号 × 自适应链共振 × 趋势分级BB惩罚 × 三市场独立权重 × A股MFF因子**

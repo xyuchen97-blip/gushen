@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
-"""Gushen Cache Layer — SQLite + Tushare primary, yfinance fallback."""
-import sqlite3, pandas as pd, numpy as np, tushare as ts
+"""Gushen Cache Layer — 股神修炼模式专用 (Tune mode only).
+       ⛔ NEVER import in data_fetcher, daily_digest, or analyze.
+       ✅ Only used by strategy/tune.py when TUNE_MODE = True.
+
+       Production scoring uses live APIs via data_fetcher.py.
+       Cache exists solely for fast backtest iteration during 修炼."""
+
+import sqlite3, pandas as pd, numpy as np, tushare as ts, os
 from pathlib import Path
 from datetime import datetime
+
+TUNE_MODE = os.environ.get("GUSHEN_TUNE", "0") == "1"
+if not TUNE_MODE:
+    raise RuntimeError("gushen_cache is 修炼模式专用. Set GUSHEN_TUNE=1 to use.")
 
 DB_PATH = Path("/Users/alafat/.workbuddy/skills/gushen/data/gushen.db")
 TOKEN = "c1cbd943613a172b916b0d249b3dc04146d13817d6bc4c0bc60756de"
