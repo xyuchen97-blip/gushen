@@ -53,6 +53,13 @@ NATIONAL_TEAM_MULT = 2.5      # National team volume threshold (×MA20)
 
 WEIGHTS = _grid_params.get("weights", {"technical": 36, "capital": 26, "fundamental": 14, "macro": 19, "fibonacci": 5})  # v9.4 calibrated
 
+# v9.4: Per-market weight overrides (Tushare data calibrated)
+MARKET_WEIGHTS = {
+    "A": {"technical": 25, "capital": 35, "fundamental": 15, "macro": 20, "fibonacci": 5},
+    "HK": {"technical": 35, "capital": 25, "fundamental": 15, "macro": 20, "fibonacci": 5},
+    "US": {"technical": 38, "capital": 24, "fundamental": 14, "macro": 19, "fibonacci": 5},
+}
+
 SIGNAL_SCORES = {
     # Contrarian (DZH)
     "golden_pit":        10,
@@ -316,7 +323,7 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
     dict with: composite (float), action (str), active (list), tech_score,
                cap_score, fund_score, macro_score, fib_bonus, bb_sell
     """
-    w = weights or WEIGHTS
+    w = weights or MARKET_WEIGHTS.get(market, WEIGHTS)  # v9.4: per-market weights
     bar_date = df_daily.index[i]
     bull = precomputed["bull_regime"].iloc[i]
     tech, cap, active, sell_override = 0, 0, [], False

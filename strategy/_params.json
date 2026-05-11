@@ -1,1 +1,0 @@
-{"weights": {"technical": 28, "capital": 32, "fundamental": 15, "macro": 20, "fibonacci": 5}, "thresholds_A": {"entry": 45, "entry_bear": 46, "watchlist": 38, "watch_bear": 39, "exit": 20, "min_hold": 5}, "thresholds_US": {"entry": 48, "watchlist": 40, "exit": 22}}
