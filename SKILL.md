@@ -1,6 +1,6 @@
 ---
 name: 股神
-description: "Multi-market quantitative stock strategy (A/HK/US). Adaptive chain resonance, graded BB penalty, MFF factor for A-shares, PB-based sector filtering. v9.1 calibrated on 22 stocks (2021-2026). Triggers on: 股神, 股票分析, 个股分析, 观察清单, daily stock recommendation."
+description: "Multi-market quantitative stock strategy (A/HK/US). Adaptive chain resonance, graded BB penalty, MFF/margin/chip concentration/holder count factors for A-shares. v9.4 tuned on 22 stocks (2021-2026). Triggers on: 股神, 股票分析, 个股分析, 观察清单, daily stock recommendation."
 agent_created: true
 ---
 

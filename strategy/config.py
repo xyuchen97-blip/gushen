@@ -1,35 +1,30 @@
 """
-Strategy Configuration Reference — LOCKED v8.1 (May 5, 2026)
+Strategy Configuration Reference — LOCKED v9.4 (May 11, 2026)
 ==============================================================
 
 Single source of truth: strategy/scoring.py + strategy/data_fetcher.py
-This file is a human-readable reference only. All constants are defined
-in scoring.py (v8.1+) and data_fetcher.py. Do NOT modify values here —
-they must match scoring.py exactly.
+Tune mode: strategy/tune.py + strategy/gushen_cache.py (GUSHEN_TUNE=1 only)
 
-=== LOCKED DATA SOURCES (see data_fetcher.py for implementation) ===
+=== PRODUCTION DATA SOURCES (data_fetcher.py) ===
 
 OHLCV (daily + weekly):
-  A-shares: ak.stock_zh_a_hist(symbol, period="daily", start_date, end_date, adjust="qfq")
-  US:       ak.stock_us_hist(symbol, period="daily", start_date, end_date, adjust="qfq")
-             → symbol lookup via Eastmoney search API (105.MSFT format)
-  HK:       ak.stock_hk_hist(symbol, period="daily", start_date, end_date, adjust="qfq")
-  CSI 300:  ak.stock_zh_index_daily(symbol="sh000300")
+  A-shares: ak.share → yfinance fallback
+  US/HK:    yfinance primary
 
 Macro:
-  VIX:      FRED API (VIXCLS series) — api.stlouisfed.org
-  USD/CNY:  FRED API (DEXCHUS series)
-  US Yields:ak.bond_zh_us_rate() → 美国国债收益率10年/5年/10年-2年
-  China PMI:ak.index_pmi_man_cx() → Caixin Manufacturing PMI
-  China CPI:ak.macro_china_cpi() → 全国-同比增长
-  China M2: ak.macro_china_money_supply()
-  China LPR:ak.macro_china_lpr()
-  China QVIX:ak.index_option_50etf_qvix() → close
-  Northbound:ak.stock_hsgt_fund_flow_summary_em() → 沪股通+深股通 北向 sum
-  US CPI:   ak.macro_usa_cpi_yoy()
-  US Unemp: FRED API (UNRATE series)
+  VIX + USD/CNY + US Unemp: FRED API
+  US Yields / China macro: akshare (Eastmoney)
 
-yfinance: Fully removed (May 5, 2026). All data from akshare + FRED API.
+A-stock special factors:
+  PB:      akshare stock_zh_valuation_baidu
+  MFF:     akshare stock_individual_fund_flow
+  Margin:  akshare stock_margin_detail_sse/szse
+
+=== TUNE MODE DATA SOURCES (gushen_cache.py) ===
+
+  All OHLCV + macro + factors: Tushare Pro (258 APIs)
+  SQLite cache: data/gushen.db
+  Guard: GUSHEN_TUNE=1 required
 
 === LOCKED CALCULATIONS (see scoring.py for implementation) ===
 
