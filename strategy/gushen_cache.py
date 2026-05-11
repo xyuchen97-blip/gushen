@@ -48,6 +48,16 @@ def init_db():
             holder_num REAL, holder_chg REAL,
             PRIMARY KEY (code, end_date)
         );
+        CREATE TABLE IF NOT EXISTS cyq_chips (
+            code TEXT, trade_date TEXT,
+            price REAL, percent REAL,
+            PRIMARY KEY (code, trade_date, price)
+        );
+        CREATE TABLE IF NOT EXISTS events (
+            code TEXT, event_date TEXT, event_type TEXT,
+            detail TEXT,
+            PRIMARY KEY (code, event_date, event_type)
+        );
         CREATE INDEX IF NOT EXISTS idx_ohlcv_date ON ohlcv(date);
         CREATE INDEX IF NOT EXISTS idx_margin_date ON margin(date);
         CREATE INDEX IF NOT EXISTS idx_macro_date ON macro(date);
@@ -127,6 +137,63 @@ def build_macro_cache():
     except Exception as e: print(f"  china_pmi: {e}")
 
     conn.commit(); conn.close()
+
+def build_holders_cache(stocks_a):
+    """Build 股东人数 cache."""
+    conn = sqlite3.connect(str(DB_PATH))
+    for code in stocks_a:
+        ts_code = f"{code}.{'SH' if code.startswith('6') else 'SZ'}"
+        existing = conn.execute("SELECT MAX(end_date) FROM holders WHERE code=?", (ts_code,)).fetchone()[0]
+        try:
+            df = pro().stk_holdernumber(ts_code=ts_code, start_date='20210101', end_date='20260506')
+            if len(df) > 0:
+                df = df.sort_values('end_date')
+                df['holder_chg'] = df['holder_num'].astype(float).pct_change()
+                for _, row in df.iterrows():
+                    conn.execute("INSERT OR REPLACE INTO holders VALUES(?,?,?,?)",
+                        (ts_code, str(row['end_date']), float(row.get('holder_num',0)),
+                         float(row.get('holder_chg',0)) if pd.notna(row.get('holder_chg')) else 0))
+                print(f"  holders {ts_code}: {len(df)} rows")
+        except Exception as e: print(f"  holders {ts_code}: {e}")
+    conn.commit(); conn.close()
+
+def build_cyq_cache(stocks_a):
+    """Build daily chip distribution cache."""
+    conn = sqlite3.connect(str(DB_PATH))
+    for code in stocks_a:
+        ts_code = f"{code}.{'SH' if code.startswith('6') else 'SZ'}"
+        existing = conn.execute("SELECT MAX(trade_date) FROM cyq_chips WHERE code=?", (ts_code,)).fetchone()[0]
+        if existing: continue
+        try:
+            # Pull last 252 trading days (1 year) of chip data
+            df = pro().cyq_chips(ts_code=ts_code, trade_date='20260506')
+            if len(df) > 0:
+                for _, row in df.iterrows():
+                    conn.execute("INSERT OR REPLACE INTO cyq_chips VALUES(?,?,?,?)",
+                        (ts_code, str(row['trade_date']), float(row['price']), float(row['percent'])))
+                print(f"  cyq {ts_code}: {len(df)} levels")
+        except Exception as e: print(f"  cyq {ts_code}: {e}")
+    conn.commit(); conn.close()
+
+def get_chip_concentration(code, current_price=None):
+    """Get chip concentration: % of shares within ±10% of current price."""
+    conn = sqlite3.connect(str(DB_PATH))
+    df = pd.read_sql("SELECT price, percent FROM cyq_chips WHERE code=? AND trade_date=(SELECT MAX(trade_date) FROM cyq_chips WHERE code=?)",
+                     conn, params=(code, code))
+    conn.close()
+    if len(df) == 0: return 0
+    if current_price:
+        nearby = df[(df['price'] >= current_price * 0.9) & (df['price'] <= current_price * 1.1)]
+        return float(nearby['percent'].sum())
+    return float(df['percent'].max())
+
+def get_holder_chg(code):
+    """Get latest shareholder count change."""
+    conn = sqlite3.connect(str(DB_PATH))
+    row = conn.execute("SELECT holder_chg FROM holders WHERE code=? ORDER BY end_date DESC LIMIT 1",
+                       (code,)).fetchone()
+    conn.close()
+    return float(row[0]) if row else 0
 
 if __name__ == "__main__":
     init_db()

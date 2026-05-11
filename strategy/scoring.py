@@ -423,6 +423,22 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
             elif mr.get("pct_5d", 0) < -5:
                 cap += 3; active.append("margin_panic")
 
+    # v9.4: Chip concentration (Tushare cyq_chips)
+    if market == "A" and macro_data and "chip_conc" in macro_data:
+        cc = macro_data["chip_conc"]
+        if cc > 50:
+            cap += 3; active.append("chip_tight")  # concentrated holdings
+        elif cc < 20:
+            cap -= 2; active.append("chip_loose")  # scattered holders
+
+    # v9.4: Shareholder count change (Tushare stk_holdernumber)
+    if market == "A" and macro_data and "holder_chg" in macro_data:
+        hc = macro_data["holder_chg"]
+        if hc < -0.03:  # holders decreased >3% = concentration
+            cap += 2; active.append("holder_consolidate")
+        elif hc > 0.05:  # holders increased >5% = dilution
+            cap -= 2; active.append("holder_dilute")
+
     # v9.1: A-stock main force flow factor — only for growth/tech sectors
     # Growth stocks (科技/消费/制造/医药): MFF ΔS=+1.09~+2.15
     # Defensive stocks (银行/公用/矿业): MFF hurts, skip
@@ -551,6 +567,20 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
             elif f.get("revenue_growth", -999) > 0: fund_score += 2
             if f.get("profit_margin", 0) > 0.15: fund_score += 3
             elif f.get("profit_margin", 0) > 0.05: fund_score += 1
+
+    # v9.4: Event-based bonuses (sparse but real signals)
+    if macro_data and "events" in macro_data:
+        ev = macro_data["events"]
+        if bar_date in ev:
+            for etype in ev[bar_date]:
+                if etype == "repurchase":
+                    fund_score += 3; active.append("repurchase")
+                elif etype == "forecast_up":
+                    fund_score += 2; active.append("forecast_up")
+                elif etype == "survey":
+                    fund_score += 2; active.append("institutional_survey")
+                elif etype == "buyback_ratio":
+                    fund_score += 4; active.append("large_buyback")
 
     # ── Normalize & Weight ──────────────────────────────────
     tech_n  = min(tech / 45.0, 1.0) * w["technical"]
