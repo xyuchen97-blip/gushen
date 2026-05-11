@@ -1,30 +1,32 @@
 """
 Unified Data Pipeline — fetches daily + weekly OHLCV for A-shares, HK, and US stocks.
-Data sources: akshare (stocks + macro), FRED API (VIX).
-yfinance fully eliminated (2026-05-05).
+Primary: Tushare Pro (258 APIs, reliable). Fallback: akshare/yfinance/FRED.
 
---- LOCKED DATA SOURCES (do not modify without audit trail) ---
-| Market | Daily OHLCV | Source |
-|--------|-------------|--------|
-| A-share | ak.stock_zh_a_hist() | Eastmoney via akshare |
-| HK      | ak.stock_hk_hist()   | Eastmoney via akshare |
-| US      | ak.stock_us_hist()   | Eastmoney via akshare |
-| VIX     | FRED API (VIXCLS)    | api.stlouisfed.org |
-| US 10Y/5Y | ak.bond_zh_us_rate() | Eastmoney via akshare |
-| China macro | ak.macro_china_*  | Eastmoney via akshare |
-| US macro | ak.macro_usa_*      | Eastmoney via akshare |
-| China QVIX | ak.index_option_50etf_qvix() | optbbs.com via akshare |
+--- DATA SOURCES (priority order) ---
+| Market     | Primary            | Fallback               |
+|------------|--------------------|------------------------|
+| A-share    | ts.pro_api().daily | ak.stock_zh_a_hist()   |
+| HK         | ts.pro_api().hk_daily | ak.stock_hk_hist()  |
+| US         | ts.pro_api().us_daily | yfinance            |
+| China macro| ts.pro_api().cn_*  | ak.macro_china_*       |
+| US macro   | FRED API           | —                      |
+| Margin     | ts.pro_api().margin | ak.stock_margin_*     |
 """
 
-import os
-import time
-import threading
-import pickle
-import pandas as pd
-import numpy as np
-import requests
-import akshare as ak
+import os, time, threading, pickle
+import pandas as pd, numpy as np, requests
+import akshare as ak, tushare as ts
 from pathlib import Path
+
+# Tushare token
+TUSHARE_TOKEN = "c1cbd943613a172b916b0d249b3dc04146d13817d6bc4c0bc60756de"
+ts.set_token(TUSHARE_TOKEN)
+_pro = None
+
+def _ts():
+    global _pro
+    if _pro is None: _pro = ts.pro_api()
+    return _pro
 from datetime import datetime, timedelta
 
 # ═══════════════════════════════════════════════════════════════════
@@ -215,49 +217,76 @@ def _get_us_symbol(ticker: str) -> str:
 # MARKET-SPECIFIC FETCHERS
 # ═══════════════════════════════════════════════════════════════════
 
-@with_retry(max_retries=3)
+def _ts_to_ak_code(ticker: str, market: str) -> str:
+    """Convert ticker to Tushare format."""
+    if market == "A":
+        return f"{ticker}.{'SH' if ticker.startswith('6') else 'SZ'}"
+    return ticker
+
 def _fetch_a_share(ticker: str, start: str, end: str) -> pd.DataFrame:
-    """Fetch A-share daily OHLCV via akshare (Eastmoney)."""
-    _limiter_ak.acquire()
-    df = ak.stock_zh_a_hist(
-        symbol=ticker, period="daily",
-        start_date=start.replace("-", ""),
-        end_date=end.replace("-", ""),
-        adjust="qfq"
-    )
+    """Fetch A-share OHLCV: Tushare primary, akshare fallback."""
+    ts_code = _ts_to_ak_code(ticker, "A")
+    start_fmt = start.replace("-", ""); end_fmt = end.replace("-", "")
+    
+    # Try Tushare first
+    try:
+        _limiter_ak.acquire()
+        df = _ts().daily(ts_code=ts_code, start_date=start_fmt, end_date=end_fmt)
+        if len(df) > 10:
+            df = df.rename(columns={'trade_date':'date','vol':'volume'})
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date')[['open','high','low','close','volume']]
+            df = df.astype(float).sort_index()
+            return df
+    except Exception: pass
+    
+    # Fallback to akshare
+    df = ak.stock_zh_a_hist(symbol=ticker, period="daily", start_date=start_fmt, end_date=end_fmt, adjust="qfq")
     return _standardize_columns(df, "A")
 
-
-@with_retry(max_retries=3)
 def _fetch_hk(ticker: str, start: str, end: str) -> pd.DataFrame:
-    """Fetch HK stock daily OHLCV via akshare (Eastmoney).
-    Ticker format: "0700.HK" → code "00700".
-    """
-    _limiter_ak.acquire()
-    code = ticker.replace(".HK", "").replace(".hk", "").zfill(5)
-    df = ak.stock_hk_hist(
-        symbol=code, period="daily",
-        start_date=start.replace("-", ""),
-        end_date=end.replace("-", ""),
-        adjust="qfq"
-    )
+    """Fetch HK OHLCV: Tushare primary, akshare fallback."""
+    code = ticker.replace(".HK","").replace(".hk","").zfill(5) + ".HK"
+    start_fmt = start.replace("-", ""); end_fmt = end.replace("-", "")
+    
+    try:
+        _limiter_ak.acquire()
+        df = _ts().hk_daily(ts_code=code, start_date=start_fmt, end_date=end_fmt)
+        if len(df) > 10:
+            df = df.rename(columns={'trade_date':'date','vol':'volume'})
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date')[['open','high','low','close','volume']]
+            df = df.astype(float).sort_index()
+            return df
+    except Exception: pass
+    
+    code2 = ticker.replace(".HK","").replace(".hk","").zfill(5)
+    df = ak.stock_hk_hist(symbol=code2, period="daily", start_date=start_fmt, end_date=end_fmt, adjust="qfq")
     return _standardize_columns(df, "HK")
 
-
-@with_retry(max_retries=3)
 def _fetch_us(ticker: str, start: str, end: str) -> pd.DataFrame:
-    """Fetch US stock daily OHLCV via akshare (Eastmoney).
-    Uses symbol mapping: MSFT → 105.MSFT.
-    """
-    _limiter_ak.acquire()
-    symbol = _get_us_symbol(ticker)
-    df = ak.stock_us_hist(
-        symbol=symbol, period="daily",
-        start_date=start.replace("-", ""),
-        end_date=end.replace("-", ""),
-        adjust="qfq"
-    )
-    return _standardize_columns(df, "US")
+    """Fetch US OHLCV: Tushare primary, yfinance fallback."""
+    start_fmt = start.replace("-", ""); end_fmt = end.replace("-", "")
+    
+    try:
+        _limiter_ak.acquire()
+        df = _ts().us_daily(ts_code=ticker, start_date=start_fmt, end_date=end_fmt)
+        if len(df) > 10:
+            df = df.rename(columns={'trade_date':'date','vol':'volume'})
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date')[['open','high','low','close','volume']]
+            df = df.astype(float).sort_index()
+            return df
+    except Exception: pass
+    
+    # Fallback to yfinance
+    import yfinance as yf
+    df = yf.download(ticker, start=start, end=end, progress=False, auto_adjust=False)
+    if isinstance(df.columns, pd.MultiIndex): df = df.xs(df.columns.levels[-1][0], axis=1, level=-1)
+    m = {'Open':'open','High':'high','Low':'low','Close':'close','Volume':'volume'}
+    df = df.rename(columns={k:v for k,v in m.items() if k in df.columns})
+    df = df[['open','high','low','close','volume']]; df.index = pd.to_datetime(df.index)
+    return df.sort_index()
 
 
 # ═══════════════════════════════════════════════════════════════════

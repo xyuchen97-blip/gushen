@@ -184,9 +184,39 @@ def reinforce(version='v9.4'):
     
     print(f"\n  ✅ {version} 强化完成。退出修炼模式。")
 
+def weight_grid():
+    """权重网格搜索"""
+    params_path = Path("/Users/alafat/.workbuddy/skills/gushen/strategy/_params.json")
+    stocks = [('600519.SH','茅台','A'),('300750.SZ','宁德时代','A'),('0700.HK','腾讯','HK'),('AAPL','苹果','US')]
+    combos = [(38,24,14,19,5),(40,22,14,19,5),(36,26,14,19,5)]
+    from strategy.gushen_cache import get_ohlcv
+    from strategy.data_fetcher import fetch_macro_data
+    import importlib, strategy.scoring
+    macro = fetch_macro_data('2021-01-01','2026-05-06')
+    for t,c,f,m,fb in combos:
+        label = f"T{t}C{c}F{f}M{m}Fb{fb}"
+        with open(params_path, 'w') as fp: json.dump({"weights":{"technical":t,"capital":c,"fundamental":f,"macro":m,"fibonacci":fb},"c2_bonus":15,"c3_bonus":22}, fp)
+        importlib.reload(strategy.scoring)
+        from strategy.scoring import precompute as pc, score_bar as sb
+        sr_list = []
+        for code, name, mkt in stocks:
+            df = get_ohlcv(code, mkt); df = df.sort_index()
+            dfw = df.resample('W-FRI').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'}).dropna()
+            buys = []
+            for i in range(50, len(dfw)-1):
+                wk = dfw.index[i]; di = df.index.get_indexer([wk], method='ffill')[0]
+                if di < 252: continue
+                try: r = sb(di, df.iloc[:di+1], pc(df.iloc[:di+1], dfw.iloc[:i+1]), macro_data=macro, market=mkt)
+                except: continue
+                if r['action'] == 'BUY': buys.append((dfw['close'].iloc[i+1]/dfw['close'].iloc[i])-1)
+            bu = np.array(buys) if buys else np.zeros(1)
+            sr_list.append(float(np.sqrt(52)*bu.mean()/bu.std()) if len(bu)>=3 and bu.std()>0 else 0)
+        print(f'  {label}: S={np.mean(sr_list):.3f}')
+    params_path.unlink(missing_ok=True)
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="股神修炼模式")
-    p.add_argument("--action", choices=["build_cache","ic_test","backtest","reinforce"], required=True)
+    p.add_argument("--action", choices=["build_cache","ic_test","backtest","weight_grid","reinforce"], required=True)
     p.add_argument("--factor", default="holder_chg")
     p.add_argument("--universe", default="all")
     p.add_argument("--version", default="v9.4")
@@ -196,5 +226,6 @@ if __name__ == "__main__":
     if args.action == "build_cache": build_cache()
     elif args.action == "ic_test": ic_test(args.factor)
     elif args.action == "backtest": backtest(args.universe)
+    elif args.action == "weight_grid": weight_grid()
     elif args.action == "reinforce": reinforce(args.version)
     print()

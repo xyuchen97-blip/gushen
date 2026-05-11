@@ -420,6 +420,8 @@ def score_bar(i: int, df_daily: pd.DataFrame, precomputed: dict,
             mr = margin_hist[bar_date]
             if mr.get("pct_5d", 0) > 5:
                 cap -= 5; active.append("margin_overheat")
+            elif mr.get("pct_5d", 0) > 2:  # v9.4: +200% extreme (still contarian)
+                cap -= 8; active.append("margin_extreme")  # stronger penalty
             elif mr.get("pct_5d", 0) < -5:
                 cap += 3; active.append("margin_panic")
 
