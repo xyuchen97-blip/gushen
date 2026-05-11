@@ -1,210 +1,91 @@
 #!/usr/bin/env python3
 """
-Stock Name Normalizer — maps free-text names to standard ticker:market pairs.
+Stock Name Normalizer v2 — Zhipu GLM-4-Flash powered.
 
-Supports: Chinese names, English names, abbreviations, common aliases.
-Unknown names fall back to LLM knowledge (agent handles these).
+Replaces hardcoded 271-line STOCK_MAP with LLM resolution.
+Cache persists to ~/.workbuddy/stock_cache.json for zero repeat API calls.
 
 Usage:
-    python normalize.py "茅台"           # → 600519 A 贵州茅台
-    python normalize.py "AMD 超微电子"    # → AMD US AMD
-    python normalize.py "腾讯"           # → 0700.HK HK 腾讯控股
-    python normalize.py --json "茅台"    # → JSON output
+    python normalize.py "茅台"            # → 600519 A 贵州茅台
+    python normalize.py "Quantum Computing Inc"  # → QUBT US Quantum Computing
+    python normalize.py --json "腾讯"     # → JSON output
 """
-import sys, json, os
+import sys, json, os, requests
 from pathlib import Path
 from datetime import datetime
 
 # ═══════════════════════════════════════════════════════════════════
-# BUILT-IN MAPPING: free-text → (ticker, market, canonical_name)
-# Keys are lowercased. Values are (ticker, market, display_name).
-# Order: put more specific matches FIRST.
+# ZHIPU LLM CONFIG
 # ═══════════════════════════════════════════════════════════════════
-
-STOCK_MAP = {}
-
-def _add(*keys, ticker, market, name):
-    for k in keys:
-        STOCK_MAP[k.lower().strip()] = (ticker.upper(), market, name)
-
-# ── A-Shares (600/000/300 series) ─────────────────────────────────
-_add("茅台", "贵州茅台", "maotai", "kweichow moutai", "600519",
-     ticker="600519", market="A", name="贵州茅台")
-
-_add("五粮液", "wuliangye", "000858",
-     ticker="000858", market="A", name="五粮液")
-
-_add("宁德时代", "宁德", "catl", "当代安普", "300750",
-     ticker="300750", market="A", name="宁德时代")
-
-_add("比亚迪", "byd", "build your dreams", "002594",
-     ticker="002594", market="A", name="比亚迪")
-
-_add("招商银行", "cmb", "招行", "600036",
-     ticker="600036", market="A", name="招商银行")
-
-_add("中国平安", "平安保险", "ping an", "601318",
-     ticker="601318", market="A", name="中国平安")
-
-_add("美的", "美的集团", "midea", "000333",
-     ticker="000333", market="A", name="美的集团")
-
-_add("迈瑞医疗", "迈瑞", "mindray", "300760",
-     ticker="300760", market="A", name="迈瑞医疗")
-
-_add("恒瑞医药", "恒瑞", "600276",
-     ticker="600276", market="A", name="恒瑞医药")
-
-_add("药明康德", "药明", "wuxi", "603259",
-     ticker="603259", market="A", name="药明康德")
-
-_add("隆基绿能", "隆基", "longi", "601012",
-     ticker="601012", market="A", name="隆基绿能")
-
-_add("兴业银行", "兴业", "601166",
-     ticker="601166", market="A", name="兴业银行")
-
-_add("工商银行", "icbc", "工行", "601398",
-     ticker="601398", market="A", name="工商银行")
-
-_add("中国中免", "中免", "601888",
-     ticker="601888", market="A", name="中国中免")
-
-_add("格力电器", "格力", "gree", "000651",
-     ticker="000651", market="A", name="格力电器")
-
-_add("海康威视", "海康", "hikvision", "002415",
-     ticker="002415", market="A", name="海康威视")
-
-_add("中信证券", "中信", "600030",
-     ticker="600030", market="A", name="中信证券")
-
-_add("京东方", "boe", "000725",
-     ticker="000725", market="A", name="京东方")
-
-_add("长江电力", "600900",
-     ticker="600900", market="A", name="长江电力")
-
-_add("平安银行", "000001",
-     ticker="000001", market="A", name="平安银行")
-
-_add("山西汾酒", "汾酒", "600809",
-     ticker="600809", market="A", name="山西汾酒")
-
-# ── HK Shares ────────────────────────────────────────────────────
-_add("腾讯", "tencent", "腾讯控股", "00700", "0700",
-     ticker="0700.HK", market="HK", name="腾讯控股")
-
-_add("阿里巴巴", "alibaba", "阿里", "baba", "9988", "09988",
-     ticker="9988.HK", market="HK", name="阿里巴巴")
-
-_add("美团", "meituan", "3690", "03690",
-     ticker="3690.HK", market="HK", name="美团")
-
-_add("友邦保险", "aia", "友邦", "1299", "01299",
-     ticker="1299.HK", market="HK", name="友邦保险")
-
-_add("中国平安hk", "平安hk", "2318",
-     ticker="2318.HK", market="HK", name="中国平安(港)")
-
-_add("小米", "xiaomi", "mi", "1810", "01810",
-     ticker="1810.HK", market="HK", name="小米集团")
-
-_add("京东", "jd", "jingdong", "9618", "09618",
-     ticker="9618.HK", market="HK", name="京东集团")
-
-_add("网易", "netease", "9999", "09999",
-     ticker="9999.HK", market="HK", name="网易")
-
-_add("快手", "kuaishou", "1024", "01024",
-     ticker="1024.HK", market="HK", name="快手")
-
-_add("比亚迪hk", "byd hk", "1211",
-     ticker="1211.HK", market="HK", name="比亚迪股份")
-
-_add("港交所", "hkex", "0388", "00388",
-     ticker="0388.HK", market="HK", name="港交所")
-
-_add("中国移动", "chinamobile", "0941", "00941",
-     ticker="0941.HK", market="HK", name="中国移动")
-
-# ── US Stocks ────────────────────────────────────────────────────
-_add("苹果", "apple", "aapl",
-     ticker="AAPL", market="US", name="Apple")
-
-_add("微软", "microsoft", "msft",
-     ticker="MSFT", market="US", name="Microsoft")
-
-_add("英伟达", "nvidia", "nvda", "恩伟达",
-     ticker="NVDA", market="US", name="Nvidia")
-
-_add("谷歌", "google", "alphabet", "goog", "googl", "alphabat",
-     ticker="GOOGL", market="US", name="Alphabet")
-
-_add("亚马逊", "amazon", "amzn",
-     ticker="AMZN", market="US", name="Amazon")
-
-_add("meta", "facebook", "fb", "元", "meta platforms",
-     ticker="META", market="US", name="Meta")
-
-_add("特斯拉", "tesla", "tsla",
-     ticker="TSLA", market="US", name="Tesla")
-
-_add("摩根大通", "jpmorgan", "jpm", "jp morgan", "摩根",
-     ticker="JPM", market="US", name="JP Morgan")
-
-_add("amd", "超微", "超微电子", "超微半导体", "advanced micro", "amd半导体",
-     ticker="AMD", market="US", name="AMD")
-
-_add("英特尔", "intel", "intc", "intell",
-     ticker="INTC", market="US", name="Intel")
-
-_add("台积电", "tsm", "tsmc", "台湾积体电路", "台积",
-     ticker="TSM", market="US", name="TSMC")
-
-_add("博通", "broadcom", "avgo",
-     ticker="AVGO", market="US", name="Broadcom")
-
-_add("高通", "qualcomm", "qcom",
-     ticker="QCOM", market="US", name="Qualcomm")
-
-_add("甲骨文", "oracle", "orcl",
-     ticker="ORCL", market="US", name="Oracle")
-
-_add("阿斯麦", "asml",
-     ticker="ASML", market="US", name="ASML")
-
-_add("奈飞", "netflix", "nflx",
-     ticker="NFLX", market="US", name="Netflix")
-
-_add("可口可乐", "cocacola", "coke", "ko",
-     ticker="KO", market="US", name="Coca-Cola")
-
-_add("伯克希尔", "berkshire", "brk", "brk.b", "brkb", "巴菲特", "buffett",
-     ticker="BRK-B", market="US", name="Berkshire Hathaway")
-
-_add("标普500", "sp500", "spx", "标普",
-     ticker="IVV", market="US", name="S&P 500 ETF")
-
-_add("纳斯达克", "nasdaq", "纳指", "qqq",
-     ticker="QQQ", market="US", name="Nasdaq ETF")
-
-_add("道琼斯", "dow", "dia", "道指",
-     ticker="DIA", market="US", name="Dow ETF")
-
-# ── Indices ──────────────────────────────────────────────────────
-_add("沪深300", "csi300", "csi 300", "000300",
-     ticker="000300", market="CN_IDX", name="沪深300")
-
-_add("上证50", "上证", "000016",
-     ticker="000016", market="CN_IDX", name="上证50")
-
-_add("恒生", "恒生指数", "hsi", "hang seng",
-     ticker="HSI", market="HK", name="恒生指数")
-
+ZHIPU_API_KEY = "82e5ed0f0960410c9ee93849295a5467.kv6mLp0DtG4RWPdG"
+ZHIPU_ENDPOINT = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+ZHIPU_MODEL = "glm-4-flash"
 
 # ═══════════════════════════════════════════════════════════════════
-# NORMALIZATION FUNCTIONS
+# CACHE: ~/.workbuddy/stock_cache.json
+# ═══════════════════════════════════════════════════════════════════
+CACHE_PATH = Path.home() / ".workbuddy" / "stock_cache.json"
+
+def _load_cache():
+    if CACHE_PATH.exists():
+        with open(CACHE_PATH) as f:
+            return json.load(f)
+    return {}
+
+def _save_cache(cache):
+    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(CACHE_PATH, 'w') as f:
+        json.dump(cache, f, indent=2, ensure_ascii=False)
+
+# ═══════════════════════════════════════════════════════════════════
+# LLM RESOLUTION
+# ═══════════════════════════════════════════════════════════════════
+
+SYSTEM_PROMPT = """You are a stock ticker resolver. Given a stock name in Chinese or English, return the correct ticker and market.
+
+Rules:
+- A-shares: return 6-digit code (e.g., 600519) and market "A"
+- HK stocks: return 4-digit code with .HK suffix (e.g., 0700.HK) and market "HK"  
+- US stocks: return uppercase ticker (e.g., AAPL) and market "US"
+- Indexes: return the index code and market "CN_IDX" (e.g., 000300 for 沪深300)
+- Return ONLY a JSON object: {"ticker": "CODE", "market": "A|HK|US|CN_IDX", "name": "Canonical Name"}
+- No other text. No explanations. Just the JSON."""
+
+def _llm_resolve(name: str) -> dict | None:
+    """Ask Zhipu GLM-4-Flash to resolve a stock name."""
+    try:
+        resp = requests.post(
+            ZHIPU_ENDPOINT,
+            headers={"Authorization": f"Bearer {ZHIPU_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": ZHIPU_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": f"Resolve: {name}"}
+                ],
+                "max_tokens": 80,
+                "temperature": 0
+            },
+            timeout=10
+        )
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"].strip()
+        
+        # Parse JSON from response (handle markdown code blocks)
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        
+        result = json.loads(content)
+        return {
+            "ticker": str(result.get("ticker", "")).upper(),
+            "market": str(result.get("market", "")),
+            "name": str(result.get("name", name))
+        }
+    except Exception as e:
+        return None
+
+# ═══════════════════════════════════════════════════════════════════
+# PUBLIC API
 # ═══════════════════════════════════════════════════════════════════
 
 def normalize_one(name: str) -> dict | None:
@@ -212,37 +93,26 @@ def normalize_one(name: str) -> dict | None:
     name = name.strip()
     key = name.lower().strip()
     
-    # Direct lookup
-    if key in STOCK_MAP:
-        t, m, n = STOCK_MAP[key]
-        return {"ticker": t, "market": m, "name": n, "input": name}
-
-    # Try without special chars
-    import re
-    clean = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff]', '', key)
-    if clean and clean != key and clean in STOCK_MAP:
-        t, m, n = STOCK_MAP[clean]
-        return {"ticker": t, "market": m, "name": n, "input": name}
+    # 1. Cache lookup
+    cache = _load_cache()
+    if key in cache:
+        entry = cache[key]
+        return {"ticker": entry["ticker"], "market": entry["market"], "name": entry["name"], "input": name}
     
-    return None  # Unknown — agent should use LLM knowledge
+    # 2. LLM resolution
+    result = _llm_resolve(name)
+    if result and result.get("ticker"):
+        cache[key] = result
+        _save_cache(cache)
+        return {**result, "input": name}
+    
+    # 3. Give up
+    return {"ticker": None, "market": None, "name": name, "input": name, "unknown": True,
+            "hint": f"Unknown: '{name}'. Try providing the stock code directly."}
 
 
 def normalize_all(names: list[str]) -> list[dict]:
-    """Normalize a list of free-text names. Returns [{"ticker","market","name","input"}]."""
-    results = []
-    for name in names:
-        r = normalize_one(name)
-        if r:
-            results.append(r)
-        else:
-            # Mark as unknown — caller (LLM agent) should resolve
-            results.append({
-                "ticker": None, "market": None, "name": name,
-                "input": name, "unknown": True,
-                "hint": f"Unknown: '{name}'. Try providing the stock code directly (e.g., '600519' or 'NVDA')."
-            })
-    return results
-
+    return [normalize_one(n) for n in names]
 
 # ═══════════════════════════════════════════════════════════════════
 # CLI
@@ -255,7 +125,7 @@ if __name__ == "__main__":
     
     if not names:
         print("Usage: python normalize.py [--json] <name1> [name2 ...]")
-        print("Example: python normalize.py 茅台 AMD 超微电子 腾讯")
+        print("Example: python normalize.py 茅台 AMD 腾讯 寒武纪")
         sys.exit(1)
     
     results = normalize_all(names)

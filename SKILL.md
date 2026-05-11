@@ -17,7 +17,8 @@ agent_created: true
 - 📋 **管理观察清单**：维护关注清单，每天早8:30自动巡检
 - 📈 **每日市场速览**：早8:30推送当日市场概况（VIX、汇率、A股/港股/美股大盘方向）和观察清单个股建议
 - 🔄 **支持A股、港股、美股**：A股和港股最为擅长（2022-2026回测：A股全场景正Alpha +5.4%）
-- 📊 **动态基本面评分**：ROE、盈利增长、营收增长、利润率（akshare实时拉取）
+- 📊 **动态基本面评分**：ROE、盈利增长、营收增长、利润率（Tushare/akshare实时拉取）
+- 🔍 **AI股票代码识别**：输入任意中文/英文名称，Zhipu GLM-4-Flash自动解析为ticker+市场
 - 🔥 **股神修炼模式**：用户说 "进入修炼模式" / "调校股神" / "test this factor" 时自动进入（见下方）
 
 ### 股神修炼模式 (Tune Mode)
@@ -38,14 +39,14 @@ GUSHEN_TUNE=1 python3 strategy/tune.py --action reinforce --version v9.4
 
 ⛔ **修炼模式缓存绝不用于生产**。实时分析、每日监控、观察清单全部通过 `data_fetcher.py` 直连实时API。
 
-### 策略速览（v9.1）
-评分引擎：**14技术信号 × 自适应链共振 × 趋势分级BB惩罚 × 三市场独立权重 × A股MFF因子**
+### 策略速览（v9.4）
+评分引擎：**14技术信号 × 自适应链共振 × 趋势分级BB惩罚 × 三市场独立权重 × A股增强因子**
 - **链共振**: BOLL→KDJ→MACD 自适应窗口(3-8 bar)，C2+15pt, C3+22pt
-- **BB惩罚**: 趋势分级 -8/-5/-3pt（替代v8.3硬覆写）
-- **三市场权重**: US T40/C25, HK T35/C25, A T30/C30
-- **A股增强**: 主力资金流MFF ±3/6pt, PB>4 成长股筛选
-- **2021-2026 回测（17只）**: Return +88% | MaxDD -13% | Sharpe 1.38 | 12/17>0
-  - US: S=2.00 (7 stocks, 无TSLA) | HK: S=1.16 (6 stocks) | A: S=0.63 (4 stocks, PB>4)
+- **BB惩罚**: 趋势分级 -8/-5/-3pt
+- **三市场权重**:  A T25/C35, HK T35/C25, US T38/C24（Tushare数据校准）
+- **A股增强**: MFF ±3/6pt, margin_extreme -8pt, chip/holder/events
+- **保险因子**: triple_confirm +3pt, yield_inversion -5pt, spread_inverted -5pt
+- **2021-2026 回测（21标，Tushare数据）**: ALL S=1.57, A S=1.14, HK S=1.03, US S=2.54
 - 美股 BULL 跑不赢买入持有（已知限制），CRASH 防御极强（6/7 正 α）
 
 ### 最佳使用场景
