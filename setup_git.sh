@@ -24,8 +24,8 @@ fi
 
 # Add remote (if not already set)
 if ! git remote get-url origin &>/dev/null; then
-    git remote add origin https://github.com/xyuchen97/gushen
-    echo "✅ Remote added: https://github.com/xyuchen97/gushen"
+    git remote add origin https://github.com/xyuchen97-blip/gushen
+    echo "✅ Remote added: https://github.com/xyuchen97-blip/gushen"
 else
     echo "✅ Remote already set: $(git remote get-url origin)"
 fi
@@ -65,4 +65,4 @@ git branch -M main
 git push -u origin main
 
 echo ""
-echo "🎉 Pushed to https://github.com/xyuchen97/gushen"
+echo "🎉 Pushed to https://github.com/xyuchen97-blip/gushen"
