@@ -1,0 +1,722 @@
+[
+  {
+    "config": "v9.7 daily (baseline)",
+    "sharpe": 0.743,
+    "by_mkt": {
+      "A": 0.029,
+      "HK": 0.746,
+      "US": 1.556
+    },
+    "trail_exits": 0,
+    "details": {
+      "600519.SH": {
+        "s": -0.306,
+        "n": 650,
+        "wr": 44.9,
+        "mkt": "A",
+        "name": "\u8305\u53f0",
+        "trail_exits": 0
+      },
+      "000858.SZ": {
+        "s": -0.151,
+        "n": 669,
+        "wr": 42.3,
+        "mkt": "A",
+        "name": "\u4e94\u7cae\u6db2",
+        "trail_exits": 0
+      },
+      "300750.SZ": {
+        "s": 0.231,
+        "n": 725,
+        "wr": 46.2,
+        "mkt": "A",
+        "name": "\u5b81\u5fb7\u65f6\u4ee3",
+        "trail_exits": 0
+      },
+      "002594.SZ": {
+        "s": 0.224,
+        "n": 660,
+        "wr": 46.1,
+        "mkt": "A",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "601318.SH": {
+        "s": 0.397,
+        "n": 677,
+        "wr": 46.5,
+        "mkt": "A",
+        "name": "\u5e73\u5b89",
+        "trail_exits": 0
+      },
+      "600036.SH": {
+        "s": 0.435,
+        "n": 713,
+        "wr": 48.7,
+        "mkt": "A",
+        "name": "\u62db\u884c",
+        "trail_exits": 0
+      },
+      "002230.SZ": {
+        "s": 0.721,
+        "n": 514,
+        "wr": 50.0,
+        "mkt": "A",
+        "name": "\u79d1\u5927\u8baf\u98de",
+        "trail_exits": 0
+      },
+      "300015.SZ": {
+        "s": -1.323,
+        "n": 706,
+        "wr": 40.9,
+        "mkt": "A",
+        "name": "\u7231\u5c14\u773c\u79d1",
+        "trail_exits": 0
+      },
+      "0700.HK": {
+        "s": 1.189,
+        "n": 501,
+        "wr": 50.7,
+        "mkt": "HK",
+        "name": "\u817e\u8baf",
+        "trail_exits": 0
+      },
+      "9988.HK": {
+        "s": 0.684,
+        "n": 495,
+        "wr": 48.7,
+        "mkt": "HK",
+        "name": "\u963f\u91cc",
+        "trail_exits": 0
+      },
+      "3690.HK": {
+        "s": -0.449,
+        "n": 413,
+        "wr": 45.8,
+        "mkt": "HK",
+        "name": "\u7f8e\u56e2",
+        "trail_exits": 0
+      },
+      "1810.HK": {
+        "s": 1.204,
+        "n": 472,
+        "wr": 50.4,
+        "mkt": "HK",
+        "name": "\u5c0f\u7c73",
+        "trail_exits": 0
+      },
+      "1211.HK": {
+        "s": 0.946,
+        "n": 333,
+        "wr": 52.0,
+        "mkt": "HK",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "0388.HK": {
+        "s": 0.902,
+        "n": 412,
+        "wr": 46.8,
+        "mkt": "HK",
+        "name": "\u6e2f\u4ea4\u6240",
+        "trail_exits": 0
+      },
+      "AAPL": {
+        "s": 0.412,
+        "n": 431,
+        "wr": 51.5,
+        "mkt": "US",
+        "name": "\u82f9\u679c",
+        "trail_exits": 0
+      },
+      "NVDA": {
+        "s": 2.495,
+        "n": 273,
+        "wr": 55.3,
+        "mkt": "US",
+        "name": "\u82f1\u4f1f\u8fbe",
+        "trail_exits": 0
+      },
+      "MSFT": {
+        "s": 1.275,
+        "n": 302,
+        "wr": 50.7,
+        "mkt": "US",
+        "name": "\u5fae\u8f6f",
+        "trail_exits": 0
+      },
+      "GOOGL": {
+        "s": 1.334,
+        "n": 401,
+        "wr": 54.9,
+        "mkt": "US",
+        "name": "\u8c37\u6b4c",
+        "trail_exits": 0
+      },
+      "AMZN": {
+        "s": 1.713,
+        "n": 305,
+        "wr": 53.4,
+        "mkt": "US",
+        "name": "\u4e9a\u9a6c\u900a",
+        "trail_exits": 0
+      },
+      "META": {
+        "s": 2.236,
+        "n": 203,
+        "wr": 57.1,
+        "mkt": "US",
+        "name": "Meta",
+        "trail_exits": 0
+      },
+      "JPM": {
+        "s": 1.429,
+        "n": 384,
+        "wr": 56.2,
+        "mkt": "US",
+        "name": "\u6469\u6839\u5927\u901a",
+        "trail_exits": 0
+      }
+    }
+  },
+  {
+    "config": "v10 daily (no trail, no macro)",
+    "sharpe": 1.255,
+    "by_mkt": {
+      "A": -0.032,
+      "HK": 1.485,
+      "US": 2.53
+    },
+    "trail_exits": 0,
+    "details": {
+      "600519.SH": {
+        "s": 0.367,
+        "n": 642,
+        "wr": 45.3,
+        "mkt": "A",
+        "name": "\u8305\u53f0",
+        "trail_exits": 0
+      },
+      "000858.SZ": {
+        "s": 0.767,
+        "n": 281,
+        "wr": 47.0,
+        "mkt": "A",
+        "name": "\u4e94\u7cae\u6db2",
+        "trail_exits": 0
+      },
+      "300750.SZ": {
+        "s": -0.129,
+        "n": 716,
+        "wr": 45.1,
+        "mkt": "A",
+        "name": "\u5b81\u5fb7\u65f6\u4ee3",
+        "trail_exits": 0
+      },
+      "002594.SZ": {
+        "s": 0.503,
+        "n": 123,
+        "wr": 43.1,
+        "mkt": "A",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "601318.SH": {
+        "s": -1.084,
+        "n": 125,
+        "wr": 46.4,
+        "mkt": "A",
+        "name": "\u5e73\u5b89",
+        "trail_exits": 0
+      },
+      "600036.SH": {
+        "s": 0.092,
+        "n": 561,
+        "wr": 46.9,
+        "mkt": "A",
+        "name": "\u62db\u884c",
+        "trail_exits": 0
+      },
+      "002230.SZ": {
+        "s": -0.369,
+        "n": 124,
+        "wr": 48.4,
+        "mkt": "A",
+        "name": "\u79d1\u5927\u8baf\u98de",
+        "trail_exits": 0
+      },
+      "300015.SZ": {
+        "s": -0.406,
+        "n": 483,
+        "wr": 43.1,
+        "mkt": "A",
+        "name": "\u7231\u5c14\u773c\u79d1",
+        "trail_exits": 0
+      },
+      "0700.HK": {
+        "s": 2.449,
+        "n": 30,
+        "wr": 63.3,
+        "mkt": "HK",
+        "name": "\u817e\u8baf",
+        "trail_exits": 0
+      },
+      "9988.HK": {
+        "s": 1.853,
+        "n": 108,
+        "wr": 46.3,
+        "mkt": "HK",
+        "name": "\u963f\u91cc",
+        "trail_exits": 0
+      },
+      "3690.HK": {
+        "s": 2.25,
+        "n": 118,
+        "wr": 50.8,
+        "mkt": "HK",
+        "name": "\u7f8e\u56e2",
+        "trail_exits": 0
+      },
+      "1810.HK": {
+        "s": 1.357,
+        "n": 68,
+        "wr": 47.1,
+        "mkt": "HK",
+        "name": "\u5c0f\u7c73",
+        "trail_exits": 0
+      },
+      "1211.HK": {
+        "s": -1.097,
+        "n": 45,
+        "wr": 42.2,
+        "mkt": "HK",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "0388.HK": {
+        "s": 2.097,
+        "n": 100,
+        "wr": 55.0,
+        "mkt": "HK",
+        "name": "\u6e2f\u4ea4\u6240",
+        "trail_exits": 0
+      },
+      "AAPL": {
+        "s": 0.812,
+        "n": 77,
+        "wr": 55.8,
+        "mkt": "US",
+        "name": "\u82f9\u679c",
+        "trail_exits": 0
+      },
+      "NVDA": {
+        "s": 2.239,
+        "n": 49,
+        "wr": 51.0,
+        "mkt": "US",
+        "name": "\u82f1\u4f1f\u8fbe",
+        "trail_exits": 0
+      },
+      "MSFT": {
+        "s": 2.35,
+        "n": 50,
+        "wr": 58.0,
+        "mkt": "US",
+        "name": "\u5fae\u8f6f",
+        "trail_exits": 0
+      },
+      "GOOGL": {
+        "s": 5.099,
+        "n": 72,
+        "wr": 62.5,
+        "mkt": "US",
+        "name": "\u8c37\u6b4c",
+        "trail_exits": 0
+      },
+      "AMZN": {
+        "s": 1.946,
+        "n": 70,
+        "wr": 52.9,
+        "mkt": "US",
+        "name": "\u4e9a\u9a6c\u900a",
+        "trail_exits": 0
+      },
+      "META": {
+        "s": 0.626,
+        "n": 48,
+        "wr": 47.9,
+        "mkt": "US",
+        "name": "Meta",
+        "trail_exits": 0
+      },
+      "JPM": {
+        "s": 4.641,
+        "n": 44,
+        "wr": 61.4,
+        "mkt": "US",
+        "name": "\u6469\u6839\u5927\u901a",
+        "trail_exits": 0
+      }
+    }
+  },
+  {
+    "config": "v10 daily + macro",
+    "sharpe": 1.252,
+    "by_mkt": {
+      "A": -0.031,
+      "HK": 1.545,
+      "US": 2.467
+    },
+    "trail_exits": 0,
+    "details": {
+      "600519.SH": {
+        "s": 0.356,
+        "n": 642,
+        "wr": 45.3,
+        "mkt": "A",
+        "name": "\u8305\u53f0",
+        "trail_exits": 0
+      },
+      "000858.SZ": {
+        "s": 0.821,
+        "n": 281,
+        "wr": 47.0,
+        "mkt": "A",
+        "name": "\u4e94\u7cae\u6db2",
+        "trail_exits": 0
+      },
+      "300750.SZ": {
+        "s": -0.186,
+        "n": 716,
+        "wr": 45.1,
+        "mkt": "A",
+        "name": "\u5b81\u5fb7\u65f6\u4ee3",
+        "trail_exits": 0
+      },
+      "002594.SZ": {
+        "s": 0.575,
+        "n": 123,
+        "wr": 43.1,
+        "mkt": "A",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "601318.SH": {
+        "s": -1.167,
+        "n": 125,
+        "wr": 46.4,
+        "mkt": "A",
+        "name": "\u5e73\u5b89",
+        "trail_exits": 0
+      },
+      "600036.SH": {
+        "s": 0.223,
+        "n": 561,
+        "wr": 46.9,
+        "mkt": "A",
+        "name": "\u62db\u884c",
+        "trail_exits": 0
+      },
+      "002230.SZ": {
+        "s": -0.357,
+        "n": 124,
+        "wr": 48.4,
+        "mkt": "A",
+        "name": "\u79d1\u5927\u8baf\u98de",
+        "trail_exits": 0
+      },
+      "300015.SZ": {
+        "s": -0.515,
+        "n": 483,
+        "wr": 43.1,
+        "mkt": "A",
+        "name": "\u7231\u5c14\u773c\u79d1",
+        "trail_exits": 0
+      },
+      "0700.HK": {
+        "s": 2.626,
+        "n": 30,
+        "wr": 63.3,
+        "mkt": "HK",
+        "name": "\u817e\u8baf",
+        "trail_exits": 0
+      },
+      "9988.HK": {
+        "s": 1.733,
+        "n": 108,
+        "wr": 46.3,
+        "mkt": "HK",
+        "name": "\u963f\u91cc",
+        "trail_exits": 0
+      },
+      "3690.HK": {
+        "s": 2.224,
+        "n": 118,
+        "wr": 50.8,
+        "mkt": "HK",
+        "name": "\u7f8e\u56e2",
+        "trail_exits": 0
+      },
+      "1810.HK": {
+        "s": 1.482,
+        "n": 68,
+        "wr": 47.1,
+        "mkt": "HK",
+        "name": "\u5c0f\u7c73",
+        "trail_exits": 0
+      },
+      "1211.HK": {
+        "s": -1.111,
+        "n": 45,
+        "wr": 42.2,
+        "mkt": "HK",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 0
+      },
+      "0388.HK": {
+        "s": 2.316,
+        "n": 100,
+        "wr": 55.0,
+        "mkt": "HK",
+        "name": "\u6e2f\u4ea4\u6240",
+        "trail_exits": 0
+      },
+      "AAPL": {
+        "s": 0.824,
+        "n": 77,
+        "wr": 55.8,
+        "mkt": "US",
+        "name": "\u82f9\u679c",
+        "trail_exits": 0
+      },
+      "NVDA": {
+        "s": 2.227,
+        "n": 49,
+        "wr": 51.0,
+        "mkt": "US",
+        "name": "\u82f1\u4f1f\u8fbe",
+        "trail_exits": 0
+      },
+      "MSFT": {
+        "s": 2.311,
+        "n": 50,
+        "wr": 58.0,
+        "mkt": "US",
+        "name": "\u5fae\u8f6f",
+        "trail_exits": 0
+      },
+      "GOOGL": {
+        "s": 5.174,
+        "n": 72,
+        "wr": 62.5,
+        "mkt": "US",
+        "name": "\u8c37\u6b4c",
+        "trail_exits": 0
+      },
+      "AMZN": {
+        "s": 1.921,
+        "n": 70,
+        "wr": 52.9,
+        "mkt": "US",
+        "name": "\u4e9a\u9a6c\u900a",
+        "trail_exits": 0
+      },
+      "META": {
+        "s": 0.074,
+        "n": 48,
+        "wr": 47.9,
+        "mkt": "US",
+        "name": "Meta",
+        "trail_exits": 0
+      },
+      "JPM": {
+        "s": 4.735,
+        "n": 44,
+        "wr": 61.4,
+        "mkt": "US",
+        "name": "\u6469\u6839\u5927\u901a",
+        "trail_exits": 0
+      }
+    }
+  },
+  {
+    "config": "v10 daily + macro + trail",
+    "sharpe": 1.095,
+    "by_mkt": {
+      "A": -0.22,
+      "HK": 1.655,
+      "US": 2.119
+    },
+    "trail_exits": 52,
+    "details": {
+      "600519.SH": {
+        "s": 0.695,
+        "n": 365,
+        "wr": 47.1,
+        "mkt": "A",
+        "name": "\u8305\u53f0",
+        "trail_exits": 5
+      },
+      "000858.SZ": {
+        "s": -1.079,
+        "n": 199,
+        "wr": 41.2,
+        "mkt": "A",
+        "name": "\u4e94\u7cae\u6db2",
+        "trail_exits": 4
+      },
+      "300750.SZ": {
+        "s": -0.698,
+        "n": 240,
+        "wr": 47.1,
+        "mkt": "A",
+        "name": "\u5b81\u5fb7\u65f6\u4ee3",
+        "trail_exits": 13
+      },
+      "002594.SZ": {
+        "s": -0.446,
+        "n": 94,
+        "wr": 43.6,
+        "mkt": "A",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 4
+      },
+      "601318.SH": {
+        "s": -0.473,
+        "n": 109,
+        "wr": 46.8,
+        "mkt": "A",
+        "name": "\u5e73\u5b89",
+        "trail_exits": 1
+      },
+      "600036.SH": {
+        "s": 1.255,
+        "n": 221,
+        "wr": 51.1,
+        "mkt": "A",
+        "name": "\u62db\u884c",
+        "trail_exits": 3
+      },
+      "002230.SZ": {
+        "s": -0.916,
+        "n": 104,
+        "wr": 48.1,
+        "mkt": "A",
+        "name": "\u79d1\u5927\u8baf\u98de",
+        "trail_exits": 3
+      },
+      "300015.SZ": {
+        "s": -0.101,
+        "n": 131,
+        "wr": 42.7,
+        "mkt": "A",
+        "name": "\u7231\u5c14\u773c\u79d1",
+        "trail_exits": 7
+      },
+      "0700.HK": {
+        "s": 3.252,
+        "n": 26,
+        "wr": 61.5,
+        "mkt": "HK",
+        "name": "\u817e\u8baf",
+        "trail_exits": 1
+      },
+      "9988.HK": {
+        "s": 2.241,
+        "n": 80,
+        "wr": 45.0,
+        "mkt": "HK",
+        "name": "\u963f\u91cc",
+        "trail_exits": 1
+      },
+      "3690.HK": {
+        "s": 1.818,
+        "n": 105,
+        "wr": 51.4,
+        "mkt": "HK",
+        "name": "\u7f8e\u56e2",
+        "trail_exits": 2
+      },
+      "1810.HK": {
+        "s": 1.175,
+        "n": 59,
+        "wr": 45.8,
+        "mkt": "HK",
+        "name": "\u5c0f\u7c73",
+        "trail_exits": 2
+      },
+      "1211.HK": {
+        "s": -0.842,
+        "n": 39,
+        "wr": 46.2,
+        "mkt": "HK",
+        "name": "\u6bd4\u4e9a\u8fea",
+        "trail_exits": 1
+      },
+      "0388.HK": {
+        "s": 2.283,
+        "n": 96,
+        "wr": 54.2,
+        "mkt": "HK",
+        "name": "\u6e2f\u4ea4\u6240",
+        "trail_exits": 1
+      },
+      "AAPL": {
+        "s": 0.824,
+        "n": 77,
+        "wr": 55.8,
+        "mkt": "US",
+        "name": "\u82f9\u679c",
+        "trail_exits": 0
+      },
+      "NVDA": {
+        "s": 1.874,
+        "n": 43,
+        "wr": 48.8,
+        "mkt": "US",
+        "name": "\u82f1\u4f1f\u8fbe",
+        "trail_exits": 2
+      },
+      "MSFT": {
+        "s": 2.311,
+        "n": 50,
+        "wr": 58.0,
+        "mkt": "US",
+        "name": "\u5fae\u8f6f",
+        "trail_exits": 0
+      },
+      "GOOGL": {
+        "s": 5.174,
+        "n": 72,
+        "wr": 62.5,
+        "mkt": "US",
+        "name": "\u8c37\u6b4c",
+        "trail_exits": 0
+      },
+      "AMZN": {
+        "s": 1.172,
+        "n": 66,
+        "wr": 50.0,
+        "mkt": "US",
+        "name": "\u4e9a\u9a6c\u900a",
+        "trail_exits": 1
+      },
+      "META": {
+        "s": -1.256,
+        "n": 34,
+        "wr": 50.0,
+        "mkt": "US",
+        "name": "Meta",
+        "trail_exits": 1
+      },
+      "JPM": {
+        "s": 4.735,
+        "n": 44,
+        "wr": 61.4,
+        "mkt": "US",
+        "name": "\u6469\u6839\u5927\u901a",
+        "trail_exits": 0
+      }
+    }
+  }
+]

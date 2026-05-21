@@ -1,0 +1,222 @@
+{
+  "version": "v9.8d",
+  "timestamp": "2026-05-18 13:40:30",
+  "aggregate": {
+    "all": 0.313,
+    "us": 0.607,
+    "hk": 0.347,
+    "a": 0.031
+  },
+  "per_stock": {
+    "600519.SH": {
+      "name": "茅台",
+      "market": "A",
+      "sharpe": -0.734,
+      "n_buys": 206,
+      "n_exits": 263,
+      "uc": 43.1,
+      "total_bars": 1240,
+      "avg_composite": 51.1
+    },
+    "000858.SZ": {
+      "name": "五粮液",
+      "market": "A",
+      "sharpe": -0.208,
+      "n_buys": 144,
+      "n_exits": 293,
+      "uc": 30.2,
+      "total_bars": 1240,
+      "avg_composite": 51.2
+    },
+    "300750.SZ": {
+      "name": "宁德时代",
+      "market": "A",
+      "sharpe": 0.656,
+      "n_buys": 146,
+      "n_exits": 226,
+      "uc": 46.8,
+      "total_bars": 1240,
+      "avg_composite": 50.9
+    },
+    "002594.SZ": {
+      "name": "比亚迪",
+      "market": "A",
+      "sharpe": -0.048,
+      "n_buys": 164,
+      "n_exits": 252,
+      "uc": 41.7,
+      "total_bars": 1240,
+      "avg_composite": 50.6
+    },
+    "601318.SH": {
+      "name": "平安",
+      "market": "A",
+      "sharpe": 0.384,
+      "n_buys": 175,
+      "n_exits": 242,
+      "uc": 47.5,
+      "total_bars": 1240,
+      "avg_composite": 50.2
+    },
+    "600036.SH": {
+      "name": "招行",
+      "market": "A",
+      "sharpe": 0.368,
+      "n_buys": 146,
+      "n_exits": 204,
+      "uc": 49.5,
+      "total_bars": 1240,
+      "avg_composite": 49.8
+    },
+    "002230.SZ": {
+      "name": "科大讯飞",
+      "market": "A",
+      "sharpe": 0.639,
+      "n_buys": 164,
+      "n_exits": 238,
+      "uc": 48.4,
+      "total_bars": 1240,
+      "avg_composite": 51.3
+    },
+    "300015.SZ": {
+      "name": "爱尔眼科",
+      "market": "A",
+      "sharpe": -0.809,
+      "n_buys": 129,
+      "n_exits": 286,
+      "uc": 34.7,
+      "total_bars": 1240,
+      "avg_composite": 51.5
+    },
+    "0700.HK": {
+      "name": "腾讯",
+      "market": "HK",
+      "sharpe": 0.561,
+      "n_buys": 117,
+      "n_exits": 339,
+      "uc": 37.8,
+      "total_bars": 1259,
+      "avg_composite": 50.8
+    },
+    "9988.HK": {
+      "name": "阿里",
+      "market": "HK",
+      "sharpe": 0.975,
+      "n_buys": 153,
+      "n_exits": 300,
+      "uc": 40.6,
+      "total_bars": 1259,
+      "avg_composite": 50.7
+    },
+    "3690.HK": {
+      "name": "美团",
+      "market": "HK",
+      "sharpe": 0.011,
+      "n_buys": 131,
+      "n_exits": 363,
+      "uc": 37.0,
+      "total_bars": 1259,
+      "avg_composite": 51.1
+    },
+    "1810.HK": {
+      "name": "小米",
+      "market": "HK",
+      "sharpe": 0.056,
+      "n_buys": 117,
+      "n_exits": 313,
+      "uc": 26.1,
+      "total_bars": 1259,
+      "avg_composite": 50.9
+    },
+    "1211.HK": {
+      "name": "比亚迪",
+      "market": "HK",
+      "sharpe": 0.453,
+      "n_buys": 143,
+      "n_exits": 375,
+      "uc": 33.3,
+      "total_bars": 1259,
+      "avg_composite": 50.0
+    },
+    "0388.HK": {
+      "name": "港交所",
+      "market": "HK",
+      "sharpe": 0.026,
+      "n_buys": 140,
+      "n_exits": 333,
+      "uc": 34.4,
+      "total_bars": 1259,
+      "avg_composite": 50.6
+    },
+    "AAPL": {
+      "name": "苹果",
+      "market": "US",
+      "sharpe": 0.853,
+      "n_buys": 104,
+      "n_exits": 398,
+      "uc": 34.0,
+      "total_bars": 1294,
+      "avg_composite": 50.1
+    },
+    "NVDA": {
+      "name": "英伟达",
+      "market": "US",
+      "sharpe": 1.031,
+      "n_buys": 76,
+      "n_exits": 436,
+      "uc": 27.0,
+      "total_bars": 1294,
+      "avg_composite": 50.2
+    },
+    "MSFT": {
+      "name": "微软",
+      "market": "US",
+      "sharpe": -0.261,
+      "n_buys": 110,
+      "n_exits": 435,
+      "uc": 28.1,
+      "total_bars": 1294,
+      "avg_composite": 49.9
+    },
+    "GOOGL": {
+      "name": "谷歌",
+      "market": "US",
+      "sharpe": 0.429,
+      "n_buys": 102,
+      "n_exits": 422,
+      "uc": 34.2,
+      "total_bars": 1294,
+      "avg_composite": 50.6
+    },
+    "AMZN": {
+      "name": "亚马逊",
+      "market": "US",
+      "sharpe": 0.27,
+      "n_buys": 117,
+      "n_exits": 464,
+      "uc": 25.5,
+      "total_bars": 1294,
+      "avg_composite": 50.6
+    },
+    "META": {
+      "name": "Meta",
+      "market": "US",
+      "sharpe": 1.062,
+      "n_buys": 69,
+      "n_exits": 274,
+      "uc": 36.2,
+      "total_bars": 933,
+      "avg_composite": 51.1
+    },
+    "JPM": {
+      "name": "摩根大通",
+      "market": "US",
+      "sharpe": 0.863,
+      "n_buys": 104,
+      "n_exits": 429,
+      "uc": 33.2,
+      "total_bars": 1294,
+      "avg_composite": 50.4
+    }
+  }
+}

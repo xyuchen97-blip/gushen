@@ -1,0 +1,132 @@
+[
+  {
+    "config": "macro+bb+hold",
+    "sharpe": 1.167,
+    "by_mkt": {
+      "A": -0.021,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 790,
+    "decay_exits": 0,
+    "bb_exits": 12,
+    "hold_exits": 1
+  },
+  {
+    "config": "macro+bb_sell",
+    "sharpe": 1.16,
+    "by_mkt": {
+      "A": -0.037,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 791,
+    "decay_exits": 0,
+    "bb_exits": 12,
+    "hold_exits": 0
+  },
+  {
+    "config": "macro+decay8",
+    "sharpe": 1.155,
+    "by_mkt": {
+      "A": -0.052,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 561,
+    "decay_exits": 25,
+    "bb_exits": 0,
+    "hold_exits": 0
+  },
+  {
+    "config": "macro+all(decay12)",
+    "sharpe": 1.154,
+    "by_mkt": {
+      "A": -0.055,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 618,
+    "decay_exits": 16,
+    "bb_exits": 5,
+    "hold_exits": 1
+  },
+  {
+    "config": "macro+hold_exit",
+    "sharpe": 1.142,
+    "by_mkt": {
+      "A": -0.085,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 931,
+    "decay_exits": 0,
+    "bb_exits": 0,
+    "hold_exits": 1
+  },
+  {
+    "config": "macro only",
+    "sharpe": 1.138,
+    "by_mkt": {
+      "A": -0.095,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 932,
+    "decay_exits": 0,
+    "bb_exits": 0,
+    "hold_exits": 0
+  },
+  {
+    "config": "macro+decay12",
+    "sharpe": 1.123,
+    "by_mkt": {
+      "A": -0.136,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 651,
+    "decay_exits": 19,
+    "bb_exits": 0,
+    "hold_exits": 0
+  },
+  {
+    "config": "macro+decay16",
+    "sharpe": 1.123,
+    "by_mkt": {
+      "A": -0.134,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 721,
+    "decay_exits": 16,
+    "bb_exits": 0,
+    "hold_exits": 0
+  },
+  {
+    "config": "macro+all(decay8)",
+    "sharpe": 1.119,
+    "by_mkt": {
+      "A": -0.147,
+      "HK": 1.644,
+      "US": 2.114
+    },
+    "n_trades": 544,
+    "decay_exits": 21,
+    "bb_exits": 4,
+    "hold_exits": 1
+  },
+  {
+    "config": "baseline",
+    "sharpe": 1.116,
+    "by_mkt": {
+      "A": -0.092,
+      "HK": 1.601,
+      "US": 2.081
+    },
+    "n_trades": 932,
+    "decay_exits": 0,
+    "bb_exits": 0,
+    "hold_exits": 0
+  }
+]

@@ -1,0 +1,114 @@
+[
+  {
+    "config": "bear=A25/HK28/US32 exit=10",
+    "sharpe": 0.893,
+    "by_mkt": {
+      "A": -0.382,
+      "HK": 1.132,
+      "US": 2.144
+    },
+    "n_trades": 486
+  },
+  {
+    "config": "bear=A22/HK26/US30 exit=10",
+    "sharpe": 0.826,
+    "by_mkt": {
+      "A": -0.354,
+      "HK": 1.242,
+      "US": 1.818
+    },
+    "n_trades": 537
+  },
+  {
+    "config": "bear=A18/HK22/US26 exit=10",
+    "sharpe": 0.699,
+    "by_mkt": {
+      "A": -0.354,
+      "HK": 1.232,
+      "US": 1.447
+    },
+    "n_trades": 647
+  },
+  {
+    "config": "exit=10",
+    "sharpe": 0.661,
+    "by_mkt": {
+      "A": -0.402,
+      "HK": 1.1,
+      "US": 1.501
+    },
+    "n_trades": 597,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  },
+  {
+    "config": "bear=A20/HK24/US28 exit=10",
+    "sharpe": 0.661,
+    "by_mkt": {
+      "A": -0.402,
+      "HK": 1.1,
+      "US": 1.501
+    },
+    "n_trades": 597
+  },
+  {
+    "config": "exit=15",
+    "sharpe": 0.65,
+    "by_mkt": {
+      "A": -0.371,
+      "HK": 0.956,
+      "US": 1.555
+    },
+    "n_trades": 496,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  },
+  {
+    "config": "exit=12",
+    "sharpe": 0.642,
+    "by_mkt": {
+      "A": -0.399,
+      "HK": 1.061,
+      "US": 1.474
+    },
+    "n_trades": 532,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  },
+  {
+    "config": "exit=8",
+    "sharpe": 0.612,
+    "by_mkt": {
+      "A": -0.495,
+      "HK": 0.947,
+      "US": 1.59
+    },
+    "n_trades": 659,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  },
+  {
+    "config": "exit=5",
+    "sharpe": 0.567,
+    "by_mkt": {
+      "A": -0.357,
+      "HK": 1.333,
+      "US": 0.965
+    },
+    "n_trades": 972,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  },
+  {
+    "config": "exit=3",
+    "sharpe": 0.372,
+    "by_mkt": {
+      "A": -0.628,
+      "HK": 1.326,
+      "US": 0.698
+    },
+    "n_trades": 1280,
+    "bear": "20/24/28",
+    "bull": "25/25/25"
+  }
+]

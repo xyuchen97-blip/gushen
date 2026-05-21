@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Cache
+strategy/_cache/
+*.pkl
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (large, not needed in repo)
+data/*.log
+
+# Legacy one-off scripts in data/
+data/run_us48.py
+data/run_us_backtest.py
+
+# Backtest snapshots (generated, not source)
+data/tune_snapshot_*.json
+
+# Legacy archive (superseded by v10.2)
+strategy/archive/
+
+# DB is included (contains cached OHLCV + analyst signals for reproducibility)
+# To regenerate: GUSHEN_TUNE=1 python3 strategy/gushen_cache.py
