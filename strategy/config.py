@@ -49,10 +49,8 @@ All technical indicators in scoring.precompute():
 
 === SCORING ARCHITECTURE ===
 
-  Composite = tech_n + cap_n + fund_n + macro_n + fib_n + fund_bonus (analyst)
-  Composite × StyleMultiplier(growth/defensive × risk_on/off)
-  Composite → ScoreHistory.normalize() → μ=50, σ=16.7 (per-ticker adaptive)
-  Action mapping: per-market z-score thresholds + adaptive exits (time decay, profit-take, ATR stop)
+  Composite = tech_n + cap_n (entry_score + cap_bonus)
+  Action mapping: per-market raw thresholds + adaptive exits (time decay, profit-take, ATR stop)
 """
 
 # Constants match scoring.py v10.2

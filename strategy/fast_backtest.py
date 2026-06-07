@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Optimized full backtest — runs precompute once per stock, scores all bars.
-   v10 (May 20, 2026): Uses score_bar_v5 (regime-adaptive dual-mode) as default.
+   v10.2 (May 2026): Regime-adaptive scoring with analyst signals.
 """
 import sys, os, warnings, json, numpy as np, pandas as pd
 from pathlib import Path
@@ -8,8 +8,11 @@ from datetime import datetime
 warnings.filterwarnings('ignore')
 
 os.environ['GUSHEN_TUNE'] = '1'
-GUSHEN = Path(os.environ.get("GUSHEN_HOME", "/Users/alafat/.workbuddy/skills/gushen"))
+# Use this script's own directory for imports + DB, fall back to workbuddy skills path
+GUSHEN = Path(os.environ.get("GUSHEN_HOME", str(Path(__file__).resolve().parent.parent)))
 sys.path.insert(0, str(GUSHEN))
+# Ensure DB path resolves to gushen_handoff/data/ regardless of GUSHEN_HOME
+os.environ.setdefault('GUSHEN_DB_PATH', str(GUSHEN / 'data' / 'gushen.db'))
 
 from strategy.scoring import precompute, score_bar_v5
 from strategy.data_fetcher import fetch_macro_data
@@ -37,20 +40,20 @@ for code, name, mkt in STOCKS:
             print('NO DATA')
             R[code] = {'s': 0, 'n': 0}
             continue
-        
+
         df = df.sort_index()
         dfw = df.resample('W-FRI').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'}).dropna()
-        
+
         m2 = dict(macro)
         if mkt == 'A':
             try: m2['chip_conc'] = get_chip_concentration(code)
             except: pass
             try: m2['holder_chg'] = get_holder_chg(code)
             except: pass
-        
+
         # Precompute ONCE
         pc = precompute(df, dfw)
-        
+
         buys = []
         in_position = False
         start_i = max(50, (df.index >= '2021-06-01').argmax() if (df.index >= '2021-06-01').any() else 50)
@@ -60,6 +63,7 @@ for code, name, mkt in STOCKS:
             di = df.index.get_indexer([wk], method='ffill')[0]
             if di < 252: continue
             ret = (dfw['close'].iloc[i+1] / dfw['close'].iloc[i]) - 1
+
             try:
                 r = score_bar_v5(di, df, pc, macro_data=m2, market=mkt)
                 act = r['action']
@@ -86,7 +90,7 @@ by_mkt = {}
 for code, name, mkt in STOCKS:
     by_mkt.setdefault(mkt, []).append(R[code]['s'])
 
-print(f'\n  === Results (v10 regime-adaptive, akshare qfq) ===')
+print(f'\n  === Results (v10.2 regime-adaptive + analyst signals) ===')
 for mkt in ['A', 'HK', 'US']:
     vals = by_mkt.get(mkt, [])
     pos = sum(1 for s in vals if s > 0)
@@ -96,12 +100,13 @@ for mkt in ['A', 'HK', 'US']:
 all_s = np.mean([v['s'] for v in R.values()])
 total_b = sum(v['n'] for v in R.values())
 print(f'  ★ Overall avg S = {all_s:.3f} | Total BUY signals: {total_b}')
-print(f'  v10.2 baseline: ALL S=1.476, A=0.222, HK=1.643, US=2.767')
-print(f'  Δ = {all_s - 1.476:+.3f}')
+print(f'  v10.2 baseline (Jun 2026 macro): ALL S=1.324, A=-0.056, HK=1.570, US=2.689')
+print(f'  Δ = {all_s - 1.324:+.3f}')
 
 # Save
 snap = {
     'date': str(datetime.now())[:10],
+    'version': 'v10.2',
     'sharpe': round(all_s, 3),
     'by_market': {m: round(np.mean(v), 3) for m, v in by_mkt.items()},
     'total_buy_signals': total_b,

@@ -799,7 +799,7 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
     # ═══════════════════════════════════════════════════════════
 
     thresholds = V10_THRESHOLDS.get(market, V10_THRESHOLDS["US"])
-    composite = entry_score + cap_bonus + fund_bonus  # v10.1: fundamental signals contribute
+    composite = entry_score + cap_bonus
     bb_sell_now = bool(precomputed["bb_sell"].iloc[i])
 
     # Exit thresholds: below this composite score → EXIT
@@ -888,6 +888,7 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
         "tech_score":   round(entry_score, 1),  # backward compat
         "cap_score":    cap_bonus,               # backward compat
         "fund_score":   round(fund_bonus, 1),       # v10.1: change-based fundamental signals
+        "cross_mkt":    0,                            # reserved (v10.3 reverted)
         "macro_score":  0,                        # removed from per-stock
         "fib_bonus":    10 if (mode == "bull_entry" and precomputed["weekly_fib_support"].iloc[i]) else 0,
         "pillar_fired": {},                       # legacy compat

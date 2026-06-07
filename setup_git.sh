@@ -40,22 +40,16 @@ git diff --cached --stat | tail -10
 echo ""
 
 # Commit
-git commit -m "v10.2: regime-adaptive scoring + analyst signals + adaptive exits
+git commit -m "v10.2: revert v10.3 cross-market/OpEx signals (regression)
 
-Engine:
-- 5-stage scoring pipeline (score_bar_v5) with regime-adaptive dual-mode
-- Stage 3.5: US earnings beat streak signals (Alpha Vantage EARNINGS)
-- Adaptive exit: time decay + profit-take trailing + ATR stop (US/A only)
-- Margin financing re-activated for A-stocks
-- All legacy code removed; all API keys use env vars
+Reverted v10.3 additions after backtest showed US Sharpe regression:
+- Cross-market momentum (HK→US): statistically significant (p=0.0001)
+  but caused US Sharpe 2.689→2.304 (-0.385). Momentum signal conflicts
+  with contrarian engine — pushes marginal signals over BUY threshold.
+- OpEx Friday gate: insufficient sample size (n=62, p=0.23).
 
-Data:
-- analyst_signals table in gushen.db (968 signals: 248 A + 720 US)
-- A-stock Tushare forecast: cached but disabled (too coarse)
-- HK akshare ET: cached for production (not backtestable)
-
-Performance (21 stocks, 2021-2026):
-- Overall S=1.476, US=2.767, HK=1.643, A=0.222"
+Research preserved in research_hypotheses.py for future reference.
+Engine restored to v10.2 baseline (analyst signals + adaptive exits)."
 
 echo ""
 echo "✅ Committed. Now pushing..."

@@ -1,8 +1,8 @@
 # Gushen (股神) Engine — Handoff Package
 
 > **Purpose**: Complete knowledge transfer for continuing development on the Gushen multi-market quantitative stock scoring engine.
-> **Date**: 2026-05-21
-> **Status**: v10.2 shipped, OOS-validated, GUTS extraction ready
+> **Date**: 2026-05-22
+> **Status**: v10.2 stable — v10.3 cross-market/OpEx reverted (caused regression)
 > **Recipient**: Execution AI (next session builder)
 
 ---
@@ -14,7 +14,7 @@
 - **Production location**: `/Users/alafat/.workbuddy/skills/gushen/`
 - **Handoff copy**: `/Users/alafat/Desktop/gushen_handoff/` (this folder — authoritative)
 - **User**: Josh — Hong Kong-based quant analyst, prefers incremental testing, data in tables, Chinese for comms / English for technical terms
-- **Current engine**: v10.2 regime-adaptive dual-mode (S=1.48 full, S=1.62 OOS test)
+- **Current engine**: v10.2 regime-adaptive dual-mode + analyst signals
 - **Previous baseline**: v9.7 (S=0.94, superseded)
 - **Skill trigger**: `股神` skill in WorkBuddy
 
@@ -239,8 +239,17 @@ gc.DB_PATH = Path('/sessions/.../mnt/gushen_handoff/data/gushen.db')
 | v9.8c | May 18 | 0.380 | 4P+3L hybrid | -60% (FAILED) |
 | v9.8d | May 18 | 0.330 | L1×mult + L2/L3 additive + 2P gate | -65% (FAILED) |
 | **v10** | **May 19-20** | **1.238** | **Regime-adaptive dual-mode** | **+31%** |
+| v10.1 | May 20 | 1.476 | Adaptive exits + margin financing | +19% |
+| v10.2 | May 21 | 1.476 | Analyst signals (US earnings beat) | Net neutral |
+| v10.3 | May 22 | REVERTED | Cross-market momentum + OpEx gate | US regression -0.385 |
 
 ### What Failed and Why (Lessons for Future Development)
+
+5. **v10.3 cross-market momentum (HK→US)**: Statistically significant correlation (r=+0.114, p=0.0001) but caused US Sharpe regression from 2.689 to 2.304 when implemented as composite score addition (+1.5/+3). Root cause: momentum signal conflicts with contrarian engine design — it pushes marginal signals over BUY threshold, creating bad entries amplified by macro_mult during risk-on periods. **Statistical significance ≠ profitable implementation. Momentum signals cannot be bolted onto a contrarian engine as additive score bonuses.**
+
+6. **v10.3 OpEx Friday gate**: Only 62 samples (p=0.23), not statistically significant. Mixed results in backtest — slightly helped when combined with cross-market but overall pair hurt. **Need much larger sample sizes before implementing calendar-based gates.**
+
+Research preserved in `research_hypotheses.py` for future reference.
 
 1. **v9.8 continuous pipeline**: Continuous signals are too smooth for contrarian exits. Binary signals flip instantly (good for EXIT), continuous glide slowly. **Keep binary for entry/exit, continuous for depth only.**
 
