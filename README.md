@@ -1,91 +1,104 @@
-# 股神 (Gushen) — OpenClaw Stock Analysis Skill
+# Gushen v18 — self-contained package
 
-A capital-preservation focused multi-factor quantitative stock analysis skill for A-shares, HK, and US markets.
+> Created June 10, 2026. The validated quant engine + GLM-4.7 agent layer.
+> Full provenance: ARCHITECTURE_v12_PROPOSAL.md (all experiments, gates, rejections).
 
-## Quick Install
+## Version ledger
+| v | What |
+|---|---|
+| v10.2 | inherited production (May 2026) — baseline later found look-ahead-inflated |
+| v11 | decontamination (band_king removed) + hold-health exits + regime hysteresis |
+| v12 | behavior buckets + FRAGILE/NA gate + vol sizing; 10y true-OOS validation PASSED |
+| v13/v14 | universe 21→54→132 + cross-sectional top-30 selection |
+| v15 | self-contained package + embedded keys + GLM agent shell (sentinel/deep-dive/normalizer) |
+| v16 | co-pilot layer: calibration, exit contracts, portfolio-first view, discretion ledger |
+| v17 | council — grounded bull/bear/judge pre-mortem, outcome-logged |
+| **v18** | **current**: Man portfolio vol-target (validated §6i + prod-wired), context-brief knowledge layer, cost-validated daily cadence (**~1.5 S after costs, ~-15% maxDD**) |
 
-Add this URL to your OpenClaw skills:
+## Quick start (zero setup — keys are embedded)
 
-```
-https://github.com/xyuchen97-blip/gushen
-```
-
-## What It Does
-
-- 🔤 **Stock name normalization** — "超微电子" → AMD:US, "茅台" → 600519:A, "英伟达" → NVDA:US
-- 📊 **Single-stock analysis** — BUY/WATCH/HOLD/EXIT with detailed reasoning
-- 📋 **Watchlist management** — maintain a curated list across A/HK/US markets
-- 🌅 **Daily 8:30 AM digest** — market overview (CSI 300, S&P 500, Nasdaq, VIX, USDCNY) + watchlist scoring
-- 🧹 **Auto-cleanup** — old generated files removed after 7 days
-
-## Strategy
-
-**14 technical signals** (Golden Pit, Nine Turns, Band King, MACD, KDJ, Bollinger, ADX, Fibonacci divergence) + **10 macro/capital signals** (northbound flow, LPR, CPI, PMI, M2, VIX, yield curve) → **0-105 composite score**.
-
-- Score ≥ 45 → BUY
-- Score 38-44 → WATCH
-- Score < 20 → EXIT
-- Otherwise → HOLD
-
-**Best for**: A-shares & HK stocks in bear/sideways markets. Capital preservation (max drawdown -0.2%). Not a replacement for buy-and-hold in strong bull markets.
-
-## Usage
-
-### Watchlist
 ```bash
-python3 scripts/watchlist.py add 600519 A 茅台
-python3 scripts/watchlist.py add 0700.HK HK 腾讯
-python3 scripts/watchlist.py list
-python3 scripts/watchlist.py remove 600519
+cd gushen_v18
+
+# Your daily assessment — FIRST RUN creates data/my_list.json + my_positions.json
+# as templates and asks you to fill them in (instructions inside each file):
+python3 agents/daily_driver.py
+
+# Discovery scan: universe-wide BUYs + calibrated top-30 ranking (★ = not your list):
+python3 agents/daily_driver.py --scan
+
+# Deep dive on one stock (engine + GLM-4.7 second opinion):
+python3 agents/daily_driver.py --deep NVDA
+
+# Discretion ledger review (you vs the engine, grows with history):
+python3 agents/daily_driver.py --review
+
+# v17 Council — grounded bull/bear/judge pre-mortem for ONE name before you act
+# (3 GLM calls; verdicts logged to council_log.jsonl for outcome grading):
+python3 agents/council.py NVDA      # or: python3 agents/council.py 茅台
+
+# Risk sentinel over the latest shadow run (veto-only, shadow mode):
+python3 agents/risk_sentinel.py
+
+# Refresh the expert-context brief (Citadel/Man/SemiAnalysis/Bridgewater → grounds
+# the GLM deep-dive & sentinel; paste paywalled articles into data/context_inbox/):
+python3 agents/context_brief.py
+
+# Wide-universe shadow run (132 names) / canonical backtests:
+python3 scripts/shadow_run.py
+python3 scripts/m4_portfolio.py --volsize --universe v13
+python3 scripts/daily_wide.py
 ```
 
-### Single Stock Analysis
-```bash
-python3 scripts/analyze.py 600519 A
-python3 scripts/analyze.py NVDA US
-```
+**ONE thing to fill in**: `strategy/gushen_keys.py` → `ZHIPU_API_KEY` (same key as
+GLM-4; copy from your WorkBuddy config). Without it the quant engine works fully;
+only GLM features are disabled. Embedded keys: Tushare, FRED, Alpha Vantage, Tiingo.
+⚠ Keys live in code by owner choice — never publish this folder.
 
-### Daily Digest
-```bash
-python3 scripts/daily_digest.py           # text report
-python3 scripts/daily_digest.py --json    # JSON for agent consumption
-```
-
-### Cleanup
-```bash
-python3 scripts/cleanup.py
-```
-
-## Requirements
-
-- Python 3.10+
-- `pip install akshare pandas numpy requests`
-- **Self-contained** — strategy engine bundled in package, no external workspace needed
-- yfinance fully removed (May 2026) — all data from akshare + FRED API
-
-## Files
+## Architecture (v15 = v12 engine + LLM shell)
 
 ```
-gushen/
-├── SKILL.md              # Skill definition (persona, triggers, behavior)
-├── README.md             # This file
-├── .gitignore
-├── scripts/
-│   ├── normalize.py      # Stock name → ticker:market normalization (80+ mapping)
-│   ├── watchlist.py      # JSON watchlist CRUD
-│   ├── analyze.py        # Single-stock scoring
-│   ├── daily_digest.py   # Daily market report + watchlist analysis
-│   └── cleanup.py        # Remove files older than 7 days
-├── strategy/             # Bundled scoring engine (self-contained)
-│   ├── scoring.py        # Core scoring engine (14 technical + 10 macro/capital signals)
-│   ├── config.py         # All locked parameters
-│   ├── data_fetcher.py   # OHLCV + macro data fetching (16 APIs)
-│   ├── bollinger.py      # Bollinger Bands computation
-│   └── fibonacci.py      # Fibonacci retracement/extension
-├── dzh_indicators/       # Classic DZH indicators
-│   ├── golden_pit.py     # Golden Pit 2.0
-│   ├── jiu_zhuan.py      # Nine Turns (TD Sequential)
-│   └── band_king.py      # Band King (ZIG resonance)
-└── data/
-    └── .gitkeep          # Watchlist directory (user data not tracked)
+L1  QUANT CORE (deterministic, frozen, backtested 2015-2026)
+    contrarian depth×confirmation entries · hold-health exits · regime hysteresis
+    · TREND/REVERT/FRAGILE buckets with FRAGILE/NA entry gate · vol-targeted sizing
+    · top-30 cross-sectional selection · macro multiplier
+    → the ONLY layer that initiates positions
+L2  RISK SENTINEL (GLM-4.7, veto-only, SHADOW MODE)
+    earnings proximity + event risk on changed/flagged names (<10 LLM calls/day)
+    verdicts CLEAR/CAUTION/VETO logged to data/sentinel_log.jsonl — 6 months of
+    shadow evaluation required before any real authority
+L3  RESEARCH OPS (process rules in ARCHITECTURE doc §5: gates, repaint tests,
+    frozen rules, one change per experiment)
+L4  EXPLANATION (GLM deep dives / commentary — zero decision authority)
 ```
+
+Authority rule everywhere: **LLM may reduce risk, never add it.**
+
+## Validated numbers (honest data, see ARCHITECTURE doc for full provenance)
+
+- Daily cadence, 132 names, vol-weighted: **S +1.45** (era1 +1.65 / era2 +1.23), maxDD -20.6%
+- 10-year true-OOS validation passed; beats buy-and-hold in A and HK, lags in US bull
+- Character: pays a toll in runaway bulls, gets paid in hard markets, half the drawdown
+- NOT modeled: transaction costs (owner decision; daily cadence makes this the largest
+  unquantified risk). Backtest ≠ live: expect live Sharpe materially lower until the
+  shadow log proves otherwise.
+
+## Universes
+
+- `data/my_list.json` — YOUR list; the daily driver scores exactly this (edit freely)
+- 132-name wide universe (universe_v13_new + universe_v14_breadth) — validation sample
+  + opportunity scan (top-30 selection); not automatically your portfolio
+
+## Compute budget
+
+Scoring = milliseconds/stock (cached indicators). Full daily pass = seconds, no LLM.
+GLM-4.7 is invoked only for: action changes, BUY/EXIT review, earnings-window holds,
+and on-demand deep dives. Typical day: <10 calls.
+
+## Maintenance
+
+- Data refresh + precompute rebuild: see scripts/warm_precomp.py and the weekly
+  scheduled task ("gushen-weekly-shadow-run") in the parent folder's setup
+- Re-pin macro deliberately: delete data/macro_snapshot.pkl + rerun scripts/run_bt_cached.py --snapshot-only
+- All experiment results append-only: data/bt2_results.jsonl, shadow_log.jsonl,
+  sentinel_log.jsonl, daily_log.jsonl

@@ -11,6 +11,8 @@ Primary: Tushare Pro (258 APIs, reliable). Fallback: akshare/yfinance/FRED.
 | China macro| ts.pro_api().cn_*  | ak.macro_china_*       |
 | US macro   | FRED API           | —                      |
 | Margin     | ts.pro_api().margin | ak.stock_margin_*     |
+| Fundamentals| tradingview-screener | akshare/Tushare     |
+| Validation | tradingview-ta     | —                      |
 """
 
 import os, time, threading, pickle
@@ -35,6 +37,7 @@ from datetime import datetime, timedelta
 # ═══════════════════════════════════════════════════════════════════
 
 # FRED API (St. Louis Fed) — read from environment variable
+from .gushen_keys import KEYS as _GK  # v15: embedded keys (sets env)
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 FRED_BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 
@@ -638,6 +641,103 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# TRADINGVIEW SCREENER — fast fundamentals (no auth, ~0.25s/batch)
+# ═══════════════════════════════════════════════════════════════════
+
+# TV screener columns for fundamental data
+_TV_FUND_FIELDS = [
+    'return_on_equity',              # percent (31.3 = 31.3%)
+    'net_margin',                    # percent (47.2 = 47.2%)
+    'earnings_per_share_basic_ttm',  # absolute (e.g. 66.04 CNY)
+    'total_revenue_yoy_growth_fy',   # percent (6.4 = 6.4% growth)
+    'net_income_yoy_growth_fy',      # percent (19.5 = 19.5% growth)
+]
+
+
+def _gushen_to_tv(ticker: str, market: str) -> tuple:
+    """Map Gushen ticker → (tv_market, tv_symbol) for tradingview-screener.
+
+    Gushen format → TV format:
+      A:  600519.SH → china, 600519
+      HK: 0700.HK  → hongkong, 700 (unpadded)
+      US: AAPL      → america, AAPL
+    """
+    if market == "A":
+        code = ticker.replace(".SH", "").replace(".SZ", "")
+        return "china", code
+    elif market == "HK":
+        code = ticker.replace(".HK", "").lstrip("0") or "0"
+        return "hongkong", code
+    elif market == "US":
+        return "america", ticker
+    return "", ticker
+
+
+def _fetch_fundamental_tv(ticker: str, market: str) -> dict:
+    """Fetch fundamentals from TradingView screener (no auth, ~0.25s).
+
+    Returns unified format matching fetch_fundamental() output contract:
+      roe:            PERCENT scale (31.3 = 31.3%)
+      profit_growth:  RATIO (0.195 = 19.5%)
+      revenue_growth: RATIO (0.064 = 6.4%)
+      profit_margin:  RATIO (0.472 = 47.2%)
+      eps:            absolute (66.04)
+    """
+    try:
+        from tradingview_screener import Query, Column
+    except ImportError:
+        return {}
+
+    tv_market, tv_sym = _gushen_to_tv(ticker, market)
+    if not tv_market:
+        return {}
+
+    try:
+        q = (Query()
+             .set_markets(tv_market)
+             .select(*_TV_FUND_FIELDS)
+             .where(Column('name') == tv_sym))
+        count, df = q.get_scanner_data()
+
+        if count == 0 or df is None or df.empty:
+            return {}
+
+        row = df.iloc[0]
+        result = {}
+
+        # ROE: TV percent → Gushen percent (keep as-is)
+        v = row.get('return_on_equity')
+        if pd.notna(v):
+            result['roe'] = float(v)
+
+        # Net margin: TV percent → Gushen RATIO (/100)
+        v = row.get('net_margin')
+        if pd.notna(v):
+            result['profit_margin'] = float(v) / 100
+
+        # EPS: absolute → absolute (keep as-is)
+        v = row.get('earnings_per_share_basic_ttm')
+        if pd.notna(v):
+            result['eps'] = float(v)
+
+        # Revenue growth YoY: TV percent → Gushen RATIO (/100)
+        v = row.get('total_revenue_yoy_growth_fy')
+        if pd.notna(v):
+            result['revenue_growth'] = float(v) / 100
+
+        # Profit growth YoY: TV percent → Gushen RATIO (/100)
+        v = row.get('net_income_yoy_growth_fy')
+        if pd.notna(v):
+            result['profit_growth'] = float(v) / 100
+
+        return result
+
+    except Exception as e:
+        print(f"  [TV] Fundamental fetch failed for {ticker}: {e}")
+        return {}
+
+
+# ═══════════════════════════════════════════════════════════════════
 # FUNDAMENTAL DATA FETCHER (v8.3 — replaces fixed 10-point neutral)
 # ═══════════════════════════════════════════════════════════════════
 #
@@ -698,24 +798,33 @@ def fetch_macro_data(start: str, end: str) -> dict[str, pd.Series]:
 def fetch_fundamental(ticker: str, market: str, source: str = "akshare") -> dict:
     """
     Fetch latest earnings quality metrics.
-    
+
     OUTPUT FORMAT (unified — same regardless of source):
       - roe:            PERCENT scale (e.g. 14.2 = 14.2%)
       - profit_growth:  RATIO (e.g. 0.15 = 15% growth)
       - revenue_growth: RATIO (e.g. 0.10 = 10% growth)
       - profit_margin:  RATIO (e.g. 0.30 = 30% margin)
       - eps:            Absolute value
-    
+
     Parameters
     ----------
-    source : "akshare" (backtest/default) or "tushare" (production GUTS engine)
-    
+    source : "akshare" (default) or "tushare" (production GUTS engine)
+
+    Routing (default path):
+      1. TradingView screener (fast ~0.25s, no auth, no rate-limit)
+      2. Fallback: akshare (slower, rate-limited, fragile Chinese column names)
+
     Tushare routing: A-stock uses fina_indicator; HK/US fall back to akshare.
     """
     if source == "tushare" and market == "A":
         return _fetch_fundamental_tushare_a(ticker)
-    
-    # Default: akshare path (all markets, backtest, or tushare HK/US fallback)
+
+    # ── Primary: TradingView screener (fast, no rate-limit, no auth) ──
+    tv = _fetch_fundamental_tv(ticker, market)
+    if tv and tv.get('roe') is not None:
+        return tv
+
+    # ── Fallback: akshare (slower, rate-limited, fragile column names) ──
     result = {}
     _limiter_ak.acquire()
     

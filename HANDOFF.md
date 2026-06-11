@@ -116,6 +116,15 @@ Note: A/HK Sharpe lower than prior v10.1 report due to DB refresh (same code, up
 - A-stock Tushare forecast (业绩预告) signals: categories (预增/略增/预减/略减) too coarse for daily scoring — triggered false BUY entries, 科大讯飞 Sharpe -0.27 → -0.73. Data cached but scoring disabled.
 - HK analyst signals: akshare ET forecast is snapshot-only (not backtestable historically). Cached for production use, contributes 0 in backtest.
 
+### Data Pipeline Upgrade (June 2026)
+
+**Fundamentals now use TradingView screener as primary source** (`tradingview-screener` PyPI package, no auth required):
+- `fetch_fundamental()` tries TV screener first (~0.25s/stock, no rate-limit), falls back to akshare on failure
+- TV fields: `return_on_equity`, `net_margin`, `earnings_per_share_basic_ttm`, `total_revenue_yoy_growth_fy`, `net_income_yoy_growth_fy`
+- Symbol mapping: A→china (code only), HK→hongkong (unpadded), US→america (ticker)
+- All 21 stocks confirmed working; total fetch time ~5.7s sequential (vs 30s+ with akshare)
+- `pip install tradingview-screener` required; graceful fallback to akshare if not installed
+
 ### v10.1 Changes (May 2026)
 
 **Shipped (positive Sharpe impact):**
@@ -145,7 +154,7 @@ gushen_handoff/
 │   ├── tune.py                 # ⭐ Backtest runner (default: v10, precompute-once)
 │   ├── fast_backtest.py        # Optimized standalone backtest (v10 default)
 │   ├── gushen_cache.py         # SQLite cache (GUSHEN_TUNE=1 required, v10.2: +analyst_signals table)
-│   ├── data_fetcher.py         # Production data fetching (akshare + FRED)
+│   ├── data_fetcher.py         # Production data fetching (TV screener → akshare fallback, FRED)
 │   ├── bollinger.py            # BB weekly buy/sell signals
 │   ├── fibonacci.py            # Fibonacci retracement scoring
 │   ├── elliot_wave.py          # triple_confirm() + wave5/shoulder diagnostics
@@ -283,7 +292,8 @@ Research preserved in `research_hypotheses.py` for future reference.
 3. **Tencent (0700.HK)**: v10 test S=0.00 — no trades triggered (too conservative thresholds for blue-chip HK)
 4. **Obsolete files**: `data/run_us_backtest.py` and `data/run_us48.py` are v9.5-era scripts (should delete)
 5. **`run_v98d_backtest.py`**: Hardcoded sandbox paths, v9.8d-specific — historical only
-6. **API tokens**: Tushare and FRED API keys are hardcoded in `gushen_cache.py` and `data_fetcher.py`
+6. **API tokens**: Tushare and FRED API keys are hardcoded in `gushen_cache.py` and `data_fetcher.py`. TV screener requires no auth.
+7. **TV screener dependency**: `pip install tradingview-screener` needed for primary fundamentals path; akshare fallback works without it
 7. **tune.py still slow for non-v10**: Legacy versions still call `precompute()` per bar per stock
 
 ---

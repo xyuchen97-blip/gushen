@@ -1,0 +1,20 @@
+{
+ "macro_view": "xAI's Colossus 2 datacenter demonstrates significant progress in AI computing, with plans to exceed Meta and Anthropic by Q3 2025.",
+ "flows_liquidity": "xAI's capital raise and partnerships with Nvidia indicate strong market positioning and liquidity for GPU investments.",
+ "semis_ai": "xAI's Colossus 2 features 200MW of cooling capacity and is designed to power 110k GB200 NVL72 units, showcasing strong semiconductor and AI supply-demand.",
+ "china_hk": "No specific China/HK views mentioned.",
+ "risk_flags": [
+  "Potential delay in GPU deployment",
+  "Increased competition in AI computing",
+  "Capital raising challenges",
+  "Hardware and software integration risks",
+  "Market demand uncertainty"
+ ],
+ "notable": "Nvidia's Rubin CPX GPU addresses memory bandwidth inefficiencies in inference, enhancing rack-scale server performance.",
+ "as_of": "2026-06-11",
+ "n_sources": 2,
+ "urls": [
+  "https://semianalysis.com/2025/09/16/xais-colossus-2-first-gigawatt-datacenter/",
+  "https://semianalysis.com/2025/09/10/another-giant-leap-the-rubin-cpx-specialized-accelerator-rack/"
+ ]
+}

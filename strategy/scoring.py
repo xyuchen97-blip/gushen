@@ -1,12 +1,18 @@
 """
-GUSHEN SCORING ENGINE — v10.2 Regime-Adaptive Dual-Mode (May 2026)
-===================================================================
+GUSHEN SCORING ENGINE — v12 (June 2026)
+========================================
 
-Production engine: score_bar_v5() — regime-separated contrarian/trend scoring.
+Production engine: score_bar_v5() + v12 policy layer in score().
+v12 stack (validated true-OOS 2016-2026, see ARCHITECTURE_v12_PROPOSAL.md §6d):
+  - hold-model exits (compute_hold_health) — DEFAULT ON (GUSHEN_HOLD_EXIT=0 disables)
+  - regime hysteresis (±3% MA200 band)    — DEFAULT ON (GUSHEN_REGIME_HYST=0 disables)
+  - FRAGILE/NA bucket entry gate          — in score() (strategy/buckets.py)
+  - vol-targeted sizing hint              — result["suggested_position_mult"]
+  - band_king buy2/sell1 REMOVED (look-ahead bias, June 2026 audit)
 See HANDOFF.md for version history.
 
 5-Stage Pipeline:
-  Stage 1: Regime detection (Weekly MA50+MA200 → bull/bear)
+  Stage 1: Regime detection (daily close > MA200 → bull/bear)
   Stage 2: Dual-mode scoring (Bear=contrarian depth, Bull=trend+fib)
   Stage 3: Volume confirmation (multiplicative)
   Stage 3.5: Analyst revision / earnings surprise signals (v10.2)
@@ -30,6 +36,7 @@ Usage:
                     macro_data=macro, weights=None)
 """
 
+import os
 import sys
 import pandas as pd
 import numpy as np
@@ -180,6 +187,23 @@ def precompute(df_daily: pd.DataFrame, df_weekly: pd.DataFrame) -> dict:
     result["ma_aligned"] = (ma20 > ma60) & (ma60 > ma120)
     result["price_above_ma50"] = close > ma50
     result["bull_regime"] = close > ma200
+
+    # ── v11 experiment: hysteresis regime (used only when GUSHEN_REGIME_HYST=1) ──
+    # bull when close > 1.03×MA200, bear when < 0.97×MA200, otherwise keep state.
+    # Removes engine-mode whipsaw when price hugs MA200.
+    _ratio = (close / ma200).values
+    _hyst = np.zeros(len(_ratio), dtype=bool)
+    _state = False
+    for _i in range(len(_ratio)):
+        _rr = _ratio[_i]
+        if np.isnan(_rr):
+            _state = False
+        elif _rr > 1.03:
+            _state = True
+        elif _rr < 0.97:
+            _state = False
+        _hyst[_i] = _state
+    result["bull_regime_hyst"] = pd.Series(_hyst, index=df_daily.index)
 
     # ── ADX ─────────────────────────────────────────────────
     hdiff = high.diff(); ldiff = -low.diff()
@@ -391,6 +415,43 @@ def compute_macro_mult(macro_data: dict, market: str, bar_date) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# v11: HOLD HEALTH (entry/hold separation)
+# ═══════════════════════════════════════════════════════════════════
+
+def compute_hold_health(precomputed: dict, i: int) -> float:
+    """
+    Trend-health score for POSITION HOLDING decisions (v11 experiment).
+
+    Rationale: `composite` measures entry-attractiveness (oversold depth,
+    contrarian triggers) — a healthy uptrend scores near zero on it, so
+    composite-based exits eject winners on strength. This score instead
+    measures whether the trend justifies continuing to hold.
+
+    Backtest (bt2.py, June 2026): replacing composite-based exits with this
+    model lifted portfolio Sharpe 0.45→0.59, turned IS (2021-24) Sharpe
+    positive, and halved max drawdown (-31.5%→-15.7%).
+
+    Used for the action decision only when GUSHEN_HOLD_EXIT=1; always
+    returned in the result dict as "hold_health".
+    """
+    def g(k):
+        v = precomputed[k]
+        x = v.iloc[i] if hasattr(v, "iloc") else v[i]
+        return bool(x) if pd.notna(x) else False
+    hh = 0.0
+    if g("ma_aligned"):        hh += 3
+    if g("price_above_ma50"):  hh += 2
+    if g("adx_strong"):        hh += 2
+    if g("weekly_ma20_up"):    hh += 2
+    if g("ma_death"):          hh -= 3
+    if g("macd_death"):        hh -= 2
+    if g("bb_sell"):           hh -= 4
+    if g("sell_signal"):       hh -= 2   # nine turns sell
+    # v11: band_king sell1 removed from hold model (look-ahead; never fires live)
+    return hh
+
+
+# ═══════════════════════════════════════════════════════════════════
 # v10: REGIME-ADAPTIVE DUAL-MODE ENGINE (score_bar_v5)
 # ═══════════════════════════════════════════════════════════════════
 
@@ -417,7 +478,11 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
     # STAGE 1: REGIME DETECTION
     # ═══════════════════════════════════════════════════════════
 
-    bull = bool(precomputed["bull_regime"].iloc[i])
+    # v12: hysteresis is DEFAULT ON (validated config). Set GUSHEN_REGIME_HYST=0 to disable.
+    if os.environ.get("GUSHEN_REGIME_HYST", "1") == "1" and "bull_regime_hyst" in precomputed:
+        bull = bool(precomputed["bull_regime_hyst"].iloc[i])
+    else:
+        bull = bool(precomputed["bull_regime"].iloc[i])
     adx_val = float(precomputed["adx_val"].iloc[i]) if pd.notna(precomputed["adx_val"].iloc[i]) else 0
     plus_di = float(precomputed["plus_di"].iloc[i]) if pd.notna(precomputed["plus_di"].iloc[i]) else 0
     minus_di = float(precomputed["minus_di"].iloc[i]) if pd.notna(precomputed["minus_di"].iloc[i]) else 0
@@ -474,8 +539,8 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
             entry_score += 10; active.append("nine_turns_buy")
         if precomputed["buy_setup_done"].iloc[i]:
             entry_score += 5; active.append("nine_turns_setup9")
-        if precomputed["buy2"].iloc[i]:
-            entry_score += 10; active.append("band_king_buy2")
+        # v11: band_king buy2 REMOVED — centered-window look-ahead (see audit
+        # June 2026): 0/20 events visible live; causal version has no edge.
         if precomputed["bb_buy"].iloc[i]:
             entry_score += 15; active.append("bb_weekly_buy")
 
@@ -499,8 +564,7 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
         # ── Sell penalties (bear mode) ──
         if precomputed["sell_signal"].iloc[i]:
             entry_score -= 10; active.append("nine_turns_sell")
-        if precomputed["sell1"].iloc[i]:
-            entry_score -= 10; active.append("band_king_sell1")
+        # v11: band_king sell1 REMOVED — same look-ahead contamination as buy2.
         if precomputed["ma_death"].iloc[i]:
             entry_score -= 5; active.append("ma_death_cross")
         if precomputed["macd_death"].iloc[i]:
@@ -578,8 +642,8 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
             entry_score += 10; active.append("nine_turns_buy")
         if precomputed["buy_setup_done"].iloc[i]:
             entry_score += 5; active.append("nine_turns_setup9")
-        if precomputed["buy2"].iloc[i]:
-            entry_score += 10; active.append("band_king_buy2")
+        # v11: band_king buy2 REMOVED — centered-window look-ahead (see audit
+        # June 2026): 0/20 events visible live; causal version has no edge.
         if precomputed["bb_buy"].iloc[i]:
             entry_score += 15; active.append("bb_weekly_buy")
         if precomputed["kdj_golden"].iloc[i]:
@@ -621,8 +685,7 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
         # ── Sell penalties ──
         if precomputed["sell_signal"].iloc[i]:
             entry_score -= 10; active.append("nine_turns_sell")
-        if precomputed["sell1"].iloc[i]:
-            entry_score -= 10; active.append("band_king_sell1")
+        # v11: band_king sell1 REMOVED — same look-ahead contamination as buy2.
         if precomputed["ma_death"].iloc[i]:
             entry_score -= 5; active.append("ma_death_cross")
         if precomputed["macd_death"].iloc[i]:
@@ -800,6 +863,10 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
 
     thresholds = V10_THRESHOLDS.get(market, V10_THRESHOLDS["US"])
     composite = entry_score + cap_bonus
+    # v11 experiment: Stage 3.5 fund_bonus was computed but never added to
+    # composite (dead code since v10.2). Env flag to test including it.
+    if os.environ.get("GUSHEN_FUND_IN_COMPOSITE") == "1":
+        composite += fund_bonus
     bb_sell_now = bool(precomputed["bb_sell"].iloc[i])
 
     # Exit thresholds: below this composite score → EXIT
@@ -848,6 +915,25 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
         action = "EXIT"
         active.append("hold_score_breakdown")
 
+    # ── v11: entry/hold separation (GUSHEN_HOLD_EXIT=1) ──
+    # Entries stay engine-driven (BUY untouched). Exits come from the trend-
+    # health hold model instead of the entry-oriented composite. Stateless
+    # two-week confirmation: current bar + ~1 week back (i-5 daily bars).
+    hh = compute_hold_health(precomputed, i)
+    # v12: hold-model exits are DEFAULT ON (validated config). GUSHEN_HOLD_EXIT=0 disables.
+    # GUSHEN_HOLD_EXIT_SKIP_MKTS=HK exempts listed markets (HK study, June 2026).
+    _skip_mkts = os.environ.get("GUSHEN_HOLD_EXIT_SKIP_MKTS", "").split(",")
+    if (os.environ.get("GUSHEN_HOLD_EXIT", "1") == "1" and action != "BUY"
+            and market not in _skip_mkts):
+        hh_prev = compute_hold_health(precomputed, max(0, i - 5))
+        hh_thresh = float(os.environ.get("GUSHEN_HOLD_EXIT_THRESH", "-2"))
+        if hh <= hh_thresh or (hh < 0 and hh_prev < 0):
+            action = "EXIT"
+            active.append(f"hold_model_exit(hh={hh:.0f},prev={hh_prev:.0f})")
+        elif action == "EXIT":
+            action = "HOLD"
+            active.append(f"hold_model_keep(hh={hh:.0f})")
+
     # ═══════════════════════════════════════════════════════════
     # STAGE 5: POSITION MANAGEMENT HINTS
     # ═══════════════════════════════════════════════════════════
@@ -879,6 +965,7 @@ def score_bar_v5(i: int, df_daily: pd.DataFrame, precomputed: dict,
         "strong_bull":  strong_bull,
         "entry_score":  round(entry_score, 1),
         "hold_score":   round(hold_score, 1),
+        "hold_health":  round(hh, 1),            # v11: trend-health for exits
         "cap_bonus":    cap_bonus,
         "vol_confirm":  round(confirmation, 2),
         "bb_sell":      bb_sell_now,
@@ -917,6 +1004,31 @@ def score(df_daily: pd.DataFrame, df_weekly: pd.DataFrame,
     if len(df_daily) < 50:
         return {"error": "Need at least 50 bars"}
     precomputed = precompute(df_daily, df_weekly)
-    # v10: regime-adaptive dual-mode is now the default scoring engine
-    return score_bar_v5(len(df_daily) - 1, df_daily, precomputed, macro_data, weights, market, ticker)
+    # v10: regime-adaptive dual-mode scoring engine
+    result = score_bar_v5(len(df_daily) - 1, df_daily, precomputed, macro_data, weights, market, ticker)
+
+    # ═══ v12 POLICY LAYER (validated 2016-2026 OOS, June 2026 — see ═══
+    # ═══ ARCHITECTURE_v12_PROPOSAL.md §6d) ═══
+    # 1. Behavior bucket + FRAGILE/NA entry gate: no NEW contrarian entries in
+    #    structural downtrends (2y ret <= -10%) or unclassifiable names.
+    try:
+        from .buckets import classify_buckets
+        _b = classify_buckets(df_weekly["close"])
+        bucket = str(_b.iloc[-1]) if len(_b) else "NA"
+    except Exception:
+        bucket = "NA"
+    result["bucket"] = bucket
+    if result["action"] == "BUY" and bucket in ("FRAGILE", "NA"):
+        result["action"] = "WATCH"
+        result["active"].append(f"v12_gate:{bucket}_entry_blocked")
+        result["reasoning"] += (f" | v12 gate: BUY downgraded to WATCH — {bucket} bucket "
+                                f"(no new entries in structural downtrends/unclassified names)")
+    # 2. Vol-targeted sizing hint (~4% weekly vol target, capped 3x), combined
+    #    with the macro multiplier into one suggested position size.
+    _wr = df_weekly["close"].pct_change()
+    _v13 = float(_wr.rolling(13).std().iloc[-1]) if len(_wr) >= 14 else None
+    vol_w = min(3.0, 0.04 / _v13) if _v13 and _v13 > 0 else 1.0
+    result["vol_weight"] = round(vol_w, 2)
+    result["suggested_position_mult"] = round(vol_w * result.get("macro_mult", 1.0), 2)
+    return result
 

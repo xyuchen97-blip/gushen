@@ -1,0 +1,3 @@
+{
+ "_help": "Your actual positions (optional but recommended). Format per position: \"TICKER\": {\"market\": \"US\", \"entry_price\": 123.4, \"entry_date\": \"2026-01-15\", \"exit\": {\"stop\": 110.0, \"hh_below\": -2, \"max_weeks\": 26}}. The \"exit\" contract is optional — set the rules you commit to at entry; the daily report will enforce them."
+}

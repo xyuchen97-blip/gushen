@@ -1,0 +1,36 @@
+{
+ "version": "v14",
+ "note": "Breadth additions beyond v13's 54. Rule: top liquid large-caps per market, sector caps, current-membership lists (survivorship caveat recorded in proposal). Names listed post-2015 enter when bucket classifier has history (NA-gated before).",
+ "A": {
+  "601857.SH": "中国石油", "601628.SH": "中国人寿", "600309.SH": "万华化学",
+  "000568.SZ": "泸州老窖", "600809.SH": "山西汾酒", "601088.SH": "中国神华",
+  "600031.SH": "三一重工", "002415.SZ": "海康威视", "601166.SH": "兴业银行",
+  "601988.SH": "中国银行", "601601.SH": "中国太保", "600585.SH": "海螺水泥",
+  "002714.SZ": "牧原股份", "601888.SH": "中国中免", "603288.SH": "海天味业",
+  "300059.SZ": "东方财富", "002352.SZ": "顺丰控股", "601225.SH": "陕西煤业",
+  "600660.SH": "福耀玻璃", "600406.SH": "国电南瑞", "300760.SZ": "迈瑞医疗",
+  "600436.SH": "片仔癀", "000725.SZ": "京东方A", "002371.SZ": "北方华创",
+  "600104.SH": "上汽集团", "000002.SZ": "万科A",
+  "600048.SH": "保利发展", "601669.SH": "中国电建", "601728.SH": "中国电信"
+ },
+ "HK": {
+  "0001.HK": "长和", "0002.HK": "中电控股", "0011.HK": "恒生银行",
+  "0016.HK": "新鸿基地产", "0066.HK": "港铁公司", "0175.HK": "吉利汽车",
+  "0267.HK": "中信股份", "0288.HK": "万洲国际", "0386.HK": "中石化H",
+  "0688.HK": "中国海外发展", "0762.HK": "中国联通", "0823.HK": "领展房产",
+  "0857.HK": "中石油H", "0939.HK": "建设银行", "1038.HK": "长江基建",
+  "1093.HK": "石药集团", "1109.HK": "华润置地", "1113.HK": "长实集团",
+  "1177.HK": "中国生物制药", "1398.HK": "工商银行H", "2318.HK": "中国平安H",
+  "2388.HK": "中银香港", "2628.HK": "中国人寿H", "1928.HK": "金沙中国",
+  "2313.HK": "申洲国际"
+ },
+ "US": {
+  "BAC": "Bank of America", "WFC": "Wells Fargo", "GS": "Goldman Sachs",
+  "ABBV": "AbbVie", "MRK": "Merck", "PFE": "Pfizer", "TMO": "Thermo Fisher",
+  "ABT": "Abbott", "ORCL": "Oracle", "CRM": "Salesforce", "ADBE": "Adobe",
+  "AMD": "AMD", "QCOM": "Qualcomm", "TXN": "Texas Instruments",
+  "NFLX": "Netflix", "DIS": "Disney", "KO": "Coca-Cola", "PEP": "PepsiCo",
+  "MCD": "McDonald's", "NKE": "Nike", "HON": "Honeywell", "GE": "GE",
+  "UPS": "UPS", "LOW": "Lowe's", "IBM": "IBM"
+ }
+}

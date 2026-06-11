@@ -1,10 +1,17 @@
 ---
 name: 股神
-description: "Multi-market quantitative stock strategy (A/HK/US). v10 regime-adaptive dual-mode engine: bear contrarian + bull trend/pullback, macro position sizing. Tuned and OOS-validated on 21 stocks (2021-2026, Sharpe 1.24). Triggers on: 股神, 股票分析, 个股分析, 观察清单, daily stock recommendation."
+description: "Multi-market quantitative stock strategy (A/HK/US). v15/v16 stack: regime-adaptive engine + hold-health exits + FRAGILE/NA bucket gate + vol-targeted sizing + portfolio vol-target + cross-sectional top-30 selection over 132-name universe. True-OOS validated 2016-2026, daily-cadence Sharpe ~1.5 after costs, maxDD ~-15%. GLM-4.7 agent layer (deep-dive/sentinel/context-brief, caution-only). Triggers on: 股神, 股票分析, 个股分析, 观察清单, daily stock recommendation."
 agent_created: true
 ---
 
 # 股神 (Gushen — Stock God)
+
+> **⚠ v15/v16 UPDATE (2026-06-10)**: 引擎已全面升级——本文件以下内容部分基于 v10, 仅供历史参考。
+> 当前权威版本在 `gushen_v18/`: 引擎默认开启 hold-health 退出 + 区制滞回; score() 内置
+> FRAGILE/NA 入场闸门 + 仓位建议; band_king buy2/sell1 已因前视偏差移除; v10 的 Sharpe 1.24
+> 是被污染的旧数字, 诚实数字见 ARCHITECTURE_v12_PROPOSAL.md §6d-6i。日常使用入口:
+> `python3 agents/daily_driver.py` (含 --scan / --deep / --review)。新会话请先读
+> gushen_v18/README.md 与 SESSION_HANDOFF.md。
 
 ## Who I Am
 

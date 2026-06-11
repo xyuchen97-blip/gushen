@@ -32,6 +32,7 @@ STOCKS = [
 ]
 
 R = {}
+score_errors = 0
 for code, name, mkt in STOCKS:
     print(f'  {code} ({name})...', end=' ', flush=True)
     try:
@@ -72,8 +73,14 @@ for code, name, mkt in STOCKS:
                     in_position = True
                 elif act == 'EXIT':
                     in_position = False
-            except:
+            except Exception as e:
+                # v11 fix: was a bare `except: macro_mult = 1.0`, which silently
+                # swallowed scoring crashes while KEEPING the prior position state
+                # (a systematic failure would backtest as "hold forever").
                 macro_mult = 1.0
+                score_errors += 1
+                if score_errors <= 3:
+                    print(f'\n  [SCORING ERROR] {code} bar {i} ({wk.date()}): {type(e).__name__}: {e}')
             if in_position:
                 buys.append(ret * macro_mult)
 
@@ -100,6 +107,8 @@ for mkt in ['A', 'HK', 'US']:
 all_s = np.mean([v['s'] for v in R.values()])
 total_b = sum(v['n'] for v in R.values())
 print(f'  ★ Overall avg S = {all_s:.3f} | Total BUY signals: {total_b}')
+if score_errors:
+    print(f'  ⚠ {score_errors} scoring exceptions were caught — results may be unreliable!')
 print(f'  v10.2 baseline (Jun 2026 macro): ALL S=1.324, A=-0.056, HK=1.570, US=2.689')
 print(f'  Δ = {all_s - 1.324:+.3f}')
 

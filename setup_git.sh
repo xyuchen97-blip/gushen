@@ -40,16 +40,17 @@ git diff --cached --stat | tail -10
 echo ""
 
 # Commit
-git commit -m "v10.2: revert v10.3 cross-market/OpEx signals (regression)
+git commit -m "data_fetcher: tradingview-screener as primary fundamentals source
 
-Reverted v10.3 additions after backtest showed US Sharpe regression:
-- Cross-market momentum (HK→US): statistically significant (p=0.0001)
-  but caused US Sharpe 2.689→2.304 (-0.385). Momentum signal conflicts
-  with contrarian engine — pushes marginal signals over BUY threshold.
-- OpEx Friday gate: insufficient sample size (n=62, p=0.23).
+fetch_fundamental() now tries TradingView screener first (~0.25s/stock,
+no auth, no rate-limit), falls back to akshare on failure.
 
-Research preserved in research_hypotheses.py for future reference.
-Engine restored to v10.2 baseline (analyst signals + adaptive exits)."
+- Added _gushen_to_tv() symbol mapping (A→china, HK→hongkong unpadded, US→america)
+- Added _fetch_fundamental_tv() with TV screener Query API
+- TV fields: return_on_equity, net_margin, eps_ttm, revenue/income growth YoY
+- Scale normalization: ROE kept percent, margins/growth → ratio (/100)
+- All 21 stocks confirmed working; 5.7s total vs 30s+ with akshare
+- Requires: pip install tradingview-screener (graceful fallback if missing)"
 
 echo ""
 echo "✅ Committed. Now pushing..."

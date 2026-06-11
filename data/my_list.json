@@ -1,0 +1,3 @@
+{
+ "_help": "Your monitor list. Add stocks as \"TICKER\": \"MARKET\" — markets: A | HK | US. Formats: A-share 600519.SH / 000858.SZ, HK 0700.HK, US NVDA. Example: \"0700.HK\": \"HK\". Save this file and rerun the daily driver."
+}

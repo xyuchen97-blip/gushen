@@ -21,6 +21,7 @@ DB_PATH = Path(os.environ.get("GUSHEN_DB_PATH", str(Path(__file__).parent.parent
 TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 
 # FRED API (for VIX, USD/CNY, US unemployment)
+from .gushen_keys import KEYS as _GK  # v15: embedded keys (sets env)
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 FRED_BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 
